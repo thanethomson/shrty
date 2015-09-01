@@ -1,0 +1,10 @@
+@(loggedIn: Boolean = false, section: String = "home")
+<div id="navbar" class="navbar-collapse collapse">
+    <ul class="nav navbar-nav">
+        @if(loggedIn) {
+            @menuItemsLoggedIn(section)
+        } else {
+            @menuItemsLoggedOut(section)
+        }
+    </ul>
+</div><!--/.nav-collapse -->

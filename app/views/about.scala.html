@@ -1,0 +1,20 @@
+@(request: play.mvc.Http.Request, loggedIn: Boolean = false)
+@base(request, "About", loggedIn, "about") {
+    <h1>About Shrty</h1>
+    <p>
+        <b>Shrty</b> is an open source URL shortening service that is meant to be locally hosted. Configured in the
+        proper way, it could be scaled to serve high volumes of traffic.
+    </p>
+
+    <h2>License</h2>
+    <p>
+        <b>Shrty</b> is released under the Apache
+    </p>
+
+    <h2>Underlying Tech</h2>
+    <p>
+        It is built on the <a href="http://www.playframework.com">Play Framework</a> and uses a
+        <a href="http://www.postgresql.org">PostgreSQL</a> back-end. The source code is available via
+        GitHub.
+    </p>
+}
