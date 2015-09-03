@@ -15,7 +15,8 @@ libraryDependencies ++= Seq(
   "org.webjars" %% "webjars-play" % "2.4.0-1",
   "org.webjars.bower" % "jquery" % "2.1.3",
   "org.webjars.bower" % "bootstrap" % "3.3.4",
-  "be.objectify" %% "deadbolt-java" % "2.4.1"
+  "be.objectify" %% "deadbolt-java" % "2.4.1",
+  "org.hashids" % "hashids" % "1.0.1"
 )
 
 // Play provides two styles of routers, one expects its actions to be injected, the

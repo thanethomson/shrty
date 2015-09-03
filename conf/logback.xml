@@ -14,6 +14,15 @@
   -->
   <logger name="play" level="INFO" />
   <logger name="application" level="DEBUG" />
+  <logger name="controllers.AdminController" level="DEBUG" />
+  <logger name="controllers.APIController" level="DEBUG" />
+  <logger name="controllers.URLController" level="DEBUG" />
+  <logger name="repos.AuthRepo" level="DEBUG" />
+  <logger name="repos.LinkRepo" level="DEBUG" />
+  <logger name="security.CacheSessionManager" level="DEBUG" />
+  <logger name="security.DefaultDeadboltHandler" level="DEBUG" />
+  <logger name="actors.HitCounterActor" level="DEBUG" />
+  <logger name="actors.DefaultActorFactory" level="DEBUG" />
 
   <root level="ERROR">
     <appender-ref ref="STDOUT" />

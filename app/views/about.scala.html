@@ -1,5 +1,5 @@
-@(request: play.mvc.Http.Request, loggedIn: Boolean = false)
-@base(request, "About", loggedIn, "about") {
+@(session: security.Session, request: play.mvc.Http.Request)
+@base(session, request, "About", "about") {
     <h1>About Shrty</h1>
     <p>
         <b>Shrty</b> is an open source URL shortening service that is meant to be locally hosted. Configured in the

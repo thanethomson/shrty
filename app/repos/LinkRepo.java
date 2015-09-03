@@ -1,0 +1,254 @@
+package repos;
+
+import java.security.SecureRandom;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.hashids.Hashids;
+
+import com.avaje.ebean.Ebean;
+import com.avaje.ebean.QueryIterator;
+import com.google.inject.Inject;
+
+import models.ShortURL;
+import models.User;
+import play.Logger;
+import play.cache.CacheApi;
+import security.SecurityConstants;
+
+/**
+ * Repository for managing short links.
+ */
+public class LinkRepo {
+  
+  private static final Logger.ALogger logger = Logger.of(LinkRepo.class);
+  private final CacheApi cacheApi;
+  
+  @Inject
+  public LinkRepo(CacheApi cacheApi) {
+    this.cacheApi = cacheApi;
+  }
+  
+  /**
+   * Attempts to generate a random, unique short code.
+   * @return
+   */
+  public String generateUniqueShortCode() {
+    Hashids hashids = new Hashids(SecurityConstants.SHORTCODE_HASH_SALT,
+        SecurityConstants.SHORTCODE_LENGTH,
+        SecurityConstants.SHORTCODE_CHARSET);
+    SecureRandom random = new SecureRandom();
+    random.setSeed(new Date().getTime());
+    String result = null, code;
+    
+    // encode random integers until we find a valid code
+    while (result == null) {
+      code = hashids.encode(random.nextInt(10000000));
+      // check if the code exists in the database
+      if (findLinkByShortCode(code) == null) {
+        result = code;
+      }
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Attempts to create a database entry for the specified short code/URL.
+   * @param title A short, descriptive title for the new entry.
+   * @param url The fully expanded URL to which to redirect.
+   * @param shortCode The short code to use (if null, a unique short code will automatically be generated).
+   * @param user The user creating the link.
+   * @return
+   */
+  public ShortURL createLink(String title, String url, String shortCode, User user) {
+    String code = (shortCode != null && shortCode.length() > 0) ? shortCode : generateUniqueShortCode();
+    ShortURL result = new ShortURL();
+    
+    result.setTitle(title);
+    result.setUrl(url);
+    result.setShortCode(code);
+    result.setHitCount(0L);
+    result.setCreated(new Date());
+    result.setCreatedBy(user);
+    
+    // save the short URL to the database
+    Ebean.save(result);
+    
+    // cache it
+    cacheLink(result);
+    
+    logger.debug(String.format("Created new short URL: %s", result.toString()));    
+    return result;
+  }
+  
+  
+  /**
+   * Allows for paged retrieval of links.
+   * @param page The page number to retrieve (starting from 0).
+   * @param pageSize The number of links to retrieve per page.
+   * @param sortBy The column by which to sort links.
+   * @param sortDir The sort direction (asc|desc).
+   * @return
+   */
+  public List<ShortURL> getLinks(int page, int pageSize, String sortBy, String sortDir) {
+    return Ebean.find(ShortURL.class)
+        .orderBy(String.format("%s %s", sortBy, sortDir))
+        .findPagedList(page, pageSize)
+        .getList();
+  }
+  
+  
+  /**
+   * Attempts to look up all of the short URL entries in the database, updating their hit
+   * counts from their corresponding entries in the cache.
+   */
+  public void updateHitCountsFromCache() {
+    long updateCount = 0;
+    
+    logger.debug("Attempting to update hit counts from cache...");
+    
+    // start a transaction for this update
+    Ebean.beginTransaction();
+    
+    try {
+      QueryIterator<ShortURL> iterator = Ebean.find(ShortURL.class)
+          .orderBy("shortCode asc, created desc")
+          .findIterate();
+      Set<String> seenCodes = new HashSet<String>();
+      
+      try {
+        while (iterator.hasNext()) {
+          ShortURL url = iterator.next();
+          // see if we have a cached version of this URL
+          ShortURL cachedUrl = getCachedLink(url.getShortCode());
+          
+          // selectively update the entries
+          if (cachedUrl != null && !seenCodes.contains(cachedUrl.getShortCode()) && cachedUrl.getHitCount() > url.getHitCount()) {
+            // update the entry's hit count
+            url.setHitCount(cachedUrl.getHitCount());
+            // update it
+            Ebean.save(url);
+            
+            // keep track of which short codes we've already seen
+            seenCodes.add(cachedUrl.getShortCode());
+            updateCount++;
+          }
+        }
+      } finally {
+        iterator.close();
+      }
+      
+      // commit the changes
+      logger.debug("Committing hit count update transaction...");
+      Ebean.commitTransaction();
+      
+    } finally {
+      Ebean.endTransaction();
+    }
+    
+    logger.debug(String.format("Updated %d entries' hit counts", updateCount));
+  }
+  
+  
+  /**
+   * Retrieves a list of all of the unique/distinct short codes in the database.
+   * @return
+   */
+  public List<ShortURL> getUniqueShortCodes() {
+    return Ebean.find(ShortURL.class)
+        .select("shortCode")
+        .setDistinct(true)
+        .findList();
+  }
+  
+  
+  /**
+   * Retrieves the total number of links in the database.
+   * @return
+   */
+  public long getLinkCount() {
+    return Ebean.find(ShortURL.class)
+        .findRowCount();
+  }
+  
+  
+  /**
+   * Retrieves the total number of unique links in the database.
+   */
+  public long getUniqueLinkCount() {
+    return Ebean.find(ShortURL.class)
+        .select("shortCode")
+        .setDistinct(true)
+        .findRowCount();
+  }
+  
+  
+  /**
+   * Attempts to find the latest link by way of its short code.
+   * @param shortCode The short code for which to search.
+   * @return A ShortURL object on success, or null if no such entry exists.
+   */
+  public ShortURL findLinkByShortCode(String shortCode) {
+    return Ebean.find(ShortURL.class)
+        .where()
+          .eq("shortCode", shortCode)
+          .orderBy("created desc")
+        .setMaxRows(1)
+        .findUnique();
+  }
+  
+  /**
+   * Puts the given short URL into the cache.
+   * @param shortUrl
+   */
+  public void cacheLink(ShortURL shortUrl) {
+    cacheApi.set(String.format("url.%s", shortUrl.getShortCode()), shortUrl);
+    logger.debug(String.format("Cached short URL entry for code: %s", shortUrl.getShortCode()));
+  }
+  
+  /**
+   * Allows one to try to retrieve a cached ShortURL object by way of its short code.
+   * @param shortCode
+   * @return A ShortURL object on success, or null if it could not be found.
+   */
+  public ShortURL getCachedLink(String shortCode) {
+    return cacheApi.getOrElse(String.format("url.%s", shortCode), () -> null);
+  }
+  
+  /**
+   * Removes the given short URL from the cache.
+   * @param shortUrl
+   */
+  public void uncacheLink(ShortURL shortUrl) {
+    String path = String.format("url.%s", shortUrl.getShortCode());
+    if (cacheApi.getOrElse(path, () -> null) != null) {
+      cacheApi.remove(path);
+      logger.debug(String.format("Removed short URL entry from cache: %s", shortUrl.getShortCode()));
+    }
+  }
+  
+  /**
+   * Performs a cached link lookup: if the URL with the given short code cannot be found in the cache,
+   * this attempts to look it up from the database.
+   * @param shortCode
+   * @return A ShortURL object on success, or null on failure.
+   */
+  public ShortURL cachedLinkLookup(String shortCode) {
+    ShortURL result = cacheApi.getOrElse(String.format("url.%s", shortCode), () -> findLinkByShortCode(shortCode));
+    
+    // if we found the relevant link
+    if (result != null) {
+      // update its hit counter in memory
+      result.setHitCount(result.getHitCount()+1);
+      // update it in the cache
+      cacheLink(result);
+      logger.debug(String.format("Updated hit count for %s to %d", result.getShortCode(), result.getHitCount()));
+    }
+    
+    return result;
+  }
+
+}

@@ -5,6 +5,7 @@ import be.objectify.deadbolt.core.models.Role;
 import be.objectify.deadbolt.core.models.Subject;
 import com.avaje.ebean.Model;
 import play.data.validation.*;
+import utils.DateTimeConstants;
 
 import javax.persistence.*;
 import java.util.ArrayList;
@@ -42,6 +43,23 @@ public class User extends Model implements Subject {
     /** The date/time at which this entry was first created. */
     private Date created;
 
+    
+    @Override
+    public String toString() {
+      StringBuilder buf = new StringBuilder();
+      String newline = System.getProperty("line.separator");
+      
+      buf.append("{"+newline);
+      buf.append(String.format("  id           = %d%s", id, newline));
+      buf.append(String.format("  firstName    = %s%s", firstName, newline));
+      buf.append(String.format("  lastName     = %s%s", lastName, newline));
+      buf.append(String.format("  email        = %s%s", email, newline));
+      buf.append(String.format("  passwordHash = %s%s", passwordHash, newline));
+      buf.append(String.format("  created      = %s%s", (created != null) ? DateTimeConstants.DATETIME_FORMATTER.format(created) : "null", newline));
+      buf.append("}"+newline);
+      
+      return buf.toString();
+    }
 
 
     public Long getId() {

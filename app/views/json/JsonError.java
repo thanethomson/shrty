@@ -1,5 +1,7 @@
 package views.json;
 
+import models.json.JsonObject;
+
 /**
  * A generic class for reporting errors via JSON.
  */

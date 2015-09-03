@@ -1,5 +1,4 @@
 @(section: String)
-<li @if(section=="home"){class="active"}><a href="#">Home</a></li>
-<li @if(section=="preferences"){class="active"}><a href="#">Preferences</a></li>
-<li @if(section=="about"){class="active"}><a href="#">About</a></li>
-<li @if(section=="help"){class="active"}><a href="#">Help</a>
+<li @if(section=="admin"){class="active"}><a href="@routes.AdminController.admin()">Administration</a></li>
+<li @if(section=="about"){class="active"}><a href="@routes.AdminController.about()">About</a></li>
+<li><a href="@routes.AdminController.doLogout()">Logout</a>

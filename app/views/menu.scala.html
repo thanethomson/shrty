@@ -1,7 +1,7 @@
-@(loggedIn: Boolean = false, section: String = "home")
+@(session: security.Session, section: String = "home")
 <div id="navbar" class="navbar-collapse collapse">
     <ul class="nav navbar-nav">
-        @if(loggedIn) {
+        @if(session != null) {
             @menuItemsLoggedIn(section)
         } else {
             @menuItemsLoggedOut(section)

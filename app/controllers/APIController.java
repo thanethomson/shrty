@@ -1,9 +1,220 @@
 package controllers;
 
+import java.security.NoSuchAlgorithmException;
+
+import com.google.inject.Inject;
+
+import be.objectify.deadbolt.java.actions.SubjectNotPresent;
+import be.objectify.deadbolt.java.actions.SubjectPresent;
+import exceptions.AlreadyExistsException;
+import exceptions.DoesNotExistException;
+import exceptions.InvalidPasswordException;
+import models.ShortURL;
+import models.User;
+import models.json.JsonAddShortUrl;
+import models.json.JsonLogin;
+import models.json.JsonSignup;
+import play.Logger;
+import play.libs.Json;
+import play.mvc.BodyParser;
 import play.mvc.Controller;
+import play.mvc.Http;
+import play.mvc.Result;
+import repos.AuthRepo;
+import repos.LinkRepo;
+import security.Session;
+import views.json.JsonError;
+import views.json.JsonGenericMessage;
+import views.json.JsonLoginSuccess;
+import views.json.JsonShortURL;
+import views.json.JsonShortURLPage;
+import views.json.JsonUser;
 
 /**
  * For handling incoming API requests.
  */
 public class APIController extends Controller {
+  
+  private static final Logger.ALogger logger = Logger.of(APIController.class);
+  private final AuthRepo authRepo;
+  private final LinkRepo linkRepo;
+  
+  @Inject
+  public APIController(AuthRepo authRepo, LinkRepo linkRepo) {
+    this.authRepo = authRepo;
+    this.linkRepo = linkRepo;
+  }
+  
+  /**
+   * Facilitates the signing up of a user.
+   * @return
+   */
+  @BodyParser.Of(BodyParser.Json.class)
+  public Result userSignup() {
+    JsonSignup signup = Json.fromJson(request().body().asJson(), JsonSignup.class);
+    
+    if (signup.firstName == null) {
+      return badRequest(Json.toJson(new JsonError("Missing first name in request")));
+    } else if (signup.lastName == null) {
+      return badRequest(Json.toJson(new JsonError("Missing last name in request")));
+    } else if (signup.email == null) {
+      return badRequest(Json.toJson(new JsonError("Missing e-mail address in request")));
+    } else if (signup.password == null) {
+      return badRequest(Json.toJson(new JsonError("Missing password in request")));
+    }
+    
+    logger.debug(String.format("Received signup request: %s", signup.toString()));
+    
+    // try to create the user
+    User user;
+    
+    try {
+      user = authRepo.createUser(signup.firstName, signup.lastName, signup.email, signup.password);
+    } catch (NoSuchAlgorithmException e) {
+      logger.error("Unable to create new user", e);
+      return internalServerError(Json.toJson(new JsonError("Internal server error")));
+    } catch (AlreadyExistsException e) {
+      logger.error("Unable to create new user", e);
+      return badRequest(Json.toJson(new JsonError(String.format("User with e-mail address %s already exists in database", signup.email))));
+    }
+    
+    logger.debug(String.format("Successfully created user with ID: %d", user.getId()));
+    
+    // all's well
+    return ok(Json.toJson(new JsonUser(user)));
+  }
+  
+  
+  /**
+   * Allows one to request a paged listing of all of the short URLs via the API.
+   * @param page The page number to retrieve (starting from 0).
+   * @param pageSize The number of records to retrieve per page.
+   * @param sortBy The column by which to sort the records.
+   * @param sortDir The direction in which to sort the records (asc|desc).
+   * @return
+   */
+  @SubjectPresent
+  public Result getShortUrls(Integer page, Integer pageSize, String sortBy, String sortDir) {
+    // make sure the sortBy field is valid
+    if (!sortBy.matches("^(title|shortCode|url|hitCount|created|createdBy)$")) {
+      logger.error(String.format("Logging invalid incoming sortBy value: %s", sortBy));
+      return badRequest(Json.toJson(new JsonError("Invalid field name for sortBy")));
+    }
+    
+    if (!sortDir.matches("^(asc|desc)$")) {
+      logger.error(String.format("Logging invalid incoming sortDir value: %s", sortDir));
+      return badRequest(Json.toJson(new JsonError("Invalid sort direction for sortDir")));
+    }
+    
+    // try to get the relevant page of links
+    return ok(Json.toJson(new JsonShortURLPage(
+        page,
+        pageSize,
+        linkRepo.getLinkCount(),
+        linkRepo.getUniqueLinkCount(),
+        sortBy,
+        sortDir,
+        linkRepo.getLinks(page, pageSize, sortBy, sortDir))));
+  }
+  
+  
+  /**
+   * Allows one to fetch details about a specific short URL via the API by way of its short code.
+   * @param code
+   * @return
+   */
+  @SubjectPresent
+  public Result getShortUrl(String code) {
+    // try to find the short URL
+    ShortURL shortUrl = linkRepo.findLinkByShortCode(code);
+    
+    if (shortUrl == null)
+      return notFound(Json.toJson(new JsonError(String.format("Cannot find short URL with code: %s", code))));
+    
+    // otherwise return the short URL's details
+    return ok(Json.toJson(new JsonShortURL(shortUrl)));
+  }
+  
+  
+  /**
+   * Allows one to add short URLs via the JSON API.
+   * @return
+   */
+  @SubjectPresent
+  @BodyParser.Of(BodyParser.Json.class)
+  public Result addShortUrl() {
+    JsonAddShortUrl addShortUrl = Json.fromJson(request().body().asJson(), JsonAddShortUrl.class);
+    Session session = (Session)Http.Context.current().args.getOrDefault("session", null);
+    
+    if (session == null) {
+      logger.error("Unable to find session in context data");
+      return internalServerError(Json.toJson(new JsonError("Internal server error")));
+    }
+    
+    // check the short URL's properties
+    if (addShortUrl.title == null || addShortUrl.title.length() == 0) {
+      return badRequest(Json.toJson(new JsonError("Missing title in request")));
+    } else if (addShortUrl.url == null || addShortUrl.url.length() == 0) {
+      return badRequest(Json.toJson(new JsonError("Missing URL in request")));
+    }
+    
+    ShortURL shortUrl = linkRepo.createLink(addShortUrl.title, addShortUrl.url, addShortUrl.shortCode, session.getUser());
+    logger.debug(String.format("Created short URL: %s", shortUrl.toString()));
+    return ok(Json.toJson(new JsonShortURL(shortUrl)));
+  }
+  
+  
+  /**
+   * Attempts to perform an API-based login, where the session ID will be returned in the JSON payload.
+   * @return
+   */
+  @SubjectNotPresent
+  @BodyParser.Of(BodyParser.Json.class)
+  public Result login() {
+    JsonLogin req = Json.fromJson(request().body().asJson(), JsonLogin.class);
+    
+    if (req.email == null || req.email.length() == 0) {
+      return badRequest(Json.toJson(new JsonError("Missing e-mail address in request")));
+    } else if (req.password == null || req.password.length() == 0) {
+      return badRequest(Json.toJson(new JsonError("Missing password in request")));
+    }
+    
+    logger.debug(String.format("Incoming login request for user: %s", req.email));
+    
+    // attempt to log the user in
+    Session session;
+    
+    try {
+      session = authRepo.login(req.email, req.password, session());
+    } catch (NoSuchAlgorithmException e) {
+      logger.error("Cannot get hash algorithm", e);
+      return internalServerError(Json.toJson(new JsonError("Internal server error")));
+    } catch (DoesNotExistException e) {
+      logger.error(String.format("E-mail address %s does not exist in database", req.email), e);
+      return notFound(Json.toJson(new JsonError(String.format("Cannot find user with e-mail address: %s", req.email))));
+    } catch (InvalidPasswordException e) {
+      return badRequest(Json.toJson(new JsonError("Invalid password")));
+    }
+    
+    logger.debug(String.format("Successfully logged user %s in; session key: %s", req.email, session.getKey()));
+    return ok(Json.toJson(new JsonLoginSuccess(session)));
+  }
+  
+  
+  /**
+   * Attempts to perform an API-based logging out of the user for whom the session is relevant.
+   * @return
+   */
+  @SubjectPresent
+  public Result logout() {
+    Session session = (Session)Http.Context.current().args.getOrDefault("session", null);
+    
+    if (session != null) {
+      logger.debug(String.format("Attempting to end session: %s", session.getKey()));
+      authRepo.logout(session, session());
+    }
+    
+    return ok(Json.toJson(new JsonGenericMessage("OK")));
+  }
+  
 }

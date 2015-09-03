@@ -1,0 +1,75 @@
+@(session: security.Session, request: play.mvc.Http.Request)
+@footer = {
+	<script type="text/javascript">
+		$(document).ready(function() {
+			console.log("Document now ready");
+		});
+	</script>
+}
+
+@base(session, request, "Administration", "admin", footer=footer) {
+	<div class="row">
+		<div class="col-md-12">
+			<h1>Administration</h1>
+			<p>
+				Welcome to the administration interface for <b>Shrty</b>. Here you will be able to add,
+				modify and remove short links.
+			</p>
+		</div>
+	</div>
+	
+	<p>&nbsp;</p>
+	
+	<h3>Add a new link</h3>
+	
+	<p>
+		If you would like to add short links to the system, please supply a short, descriptive title for
+		the link, as well as the URL to which you want the link to point. Leave the <i>Short code</i>
+		field blank if you would like the system to generate a unique short code for you automatically.
+	</p>
+	
+	<form class="form-inline">
+		<div class="form-group">
+			<input type="text" class="form-control" id="titleInput" placeholder="Title for link" />
+		</div>
+		<div class="form-group">
+			<input type="text" class="form-control" id="urlInput" placeholder="Destination URL" />
+		</div>
+		<div class="form-group">
+			<input type="text" class="form-control" id="codeInput" placeholder="Short code" />
+		</div>
+		<div class="form-group">
+			<button type="button" id="addUrlBtn" class="btn btn-success">Add URL</button>
+		</div>
+	</form>
+	
+	<p>&nbsp;</p>
+	
+	<h3>Search for links</h3>
+	
+	<form class="form-horizontal">
+		<div class="form-group">
+			<div class="col-md-10">
+				<input type="text" class="form-control" id="searchInput" placeholder="Filter URLs..." />
+			</div>
+			<div class="col-md-2">
+				<select id="linksPerPageInput" class="form-control" title="Number of links to display per page">
+					<option>10</option>
+					<option>20</option>
+					<option>50</option>
+					<option>100</option>
+				</select>
+			</div>
+		</div>
+	</form>
+	
+	<table id="linkTable" class="table table-striped">
+		<tr>
+			<th>Title</th>
+			<th>Short Code</th>
+			<th>URL</th>
+			<th>Created</th>
+			<th>Created By</th>
+		</tr>
+	</table>
+}

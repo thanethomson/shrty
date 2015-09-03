@@ -1,0 +1,8 @@
+@(session: security.Session, request: play.mvc.Http.Request)
+@base(session, request, "Internal Server Error", "error") {
+	<h1>Oh no...</h1>
+	<p>
+		It seems as though an internal server error has occurred. Please try your operation again in a few
+		minutes, and if this error continues please contact the system administrator.
+	</p>
+}
