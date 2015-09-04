@@ -11,6 +11,7 @@ GET        /logout               @controllers.AdminController.doLogout()
 GET        /about                @controllers.AdminController.about()
 
 # API
+GET        /api/user/:email      @controllers.APIController.getUserByEmail(email: String)
 POST       /api/user             @controllers.APIController.userSignup()
 
 GET        /api/shorturl         @controllers.APIController.getShortUrls(page: Integer = 0, pageSize: Integer = 10, sortBy: String = "title", sortDir: String = "asc")

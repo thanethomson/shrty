@@ -254,6 +254,16 @@ public class AuthRepo {
   
   
   /**
+   * Attempts to find the user with the given ID.
+   * @param id
+   * @return
+   */
+  public User findUserById(int id) {
+    return Ebean.find(User.class).where().idEq(id).findUnique();
+  }
+  
+  
+  /**
    * Globally accessible function to obtain the password hash for a given password.
    * @param password
    * @return

@@ -25,3 +25,6 @@ routesGenerator := InjectedRoutesGenerator
 
 // set the debug level for the Ebean infrastructure
 playEbeanDebugLevel := 6
+
+// We need a different configuration file for testing
+javaOptions in Test += "-Dconfig.resource=application_test.conf"

@@ -81,6 +81,40 @@ public class APIController extends BaseController {
   
   
   /**
+   * Tries to retrieve the user with the specified ID.
+   * @param id
+   * @return
+   */
+  @SubjectPresent
+  public Result getUserById(int id) {
+    User user = authRepo.findUserById(id);
+    
+    if (user == null) {
+      return notFound(Json.toJson(new JsonError(String.format("Could not find user with ID %d", id))));
+    } else {
+      return ok(Json.toJson(new JsonUser(user)));
+    }
+  }
+  
+  
+  /**
+   * Tries to retrieve the user with the specified e-mail address.
+   * @param email
+   * @return
+   */
+  @SubjectPresent
+  public Result getUserByEmail(String email) {
+    User user = authRepo.findUserByEmail(email);
+    
+    if (user == null) {
+      return notFound(Json.toJson(new JsonError(String.format("Could not find user with e-mail %s", email))));
+    } else {
+      return ok(Json.toJson(new JsonUser(user)));
+    }
+  }
+  
+  
+  /**
    * Allows one to request a paged listing of all of the short URLs via the API.
    * @param page The page number to retrieve (starting from 0).
    * @param pageSize The number of records to retrieve per page.

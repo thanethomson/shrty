@@ -23,6 +23,9 @@
   <logger name="security.DefaultDeadboltHandler" level="DEBUG" />
   <logger name="actors.HitCounterActor" level="DEBUG" />
   <logger name="actors.DefaultActorFactory" level="DEBUG" />
+  <logger name="modules.DevModule" level="DEBUG" />
+  <logger name="modules.TestModule" level="DEBUG" />
+  <logger name="integration.APITests" level="DEBUG" />
 
   <root level="ERROR">
     <appender-ref ref="STDOUT" />
