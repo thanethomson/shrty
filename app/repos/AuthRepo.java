@@ -1,6 +1,7 @@
 package repos;
 
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Date;
 
 import com.avaje.ebean.Ebean;
@@ -12,9 +13,12 @@ import exceptions.DoesNotExistException;
 import exceptions.InvalidPasswordException;
 import models.User;
 import play.Logger;
+import play.cache.CacheApi;
+import play.cache.NamedCache;
 import play.mvc.Http;
-import security.Session;
-import security.SessionManager;
+import models.Session;
+import security.SecurityConstants;
+import utils.DateTimeConstants;
 
 /**
  * Handles all user- and authentication-related functionality.
@@ -22,11 +26,11 @@ import security.SessionManager;
 public class AuthRepo {
   
   private static final Logger.ALogger logger = Logger.of(AuthRepo.class);
-  private final SessionManager sessionManager;
+  private final CacheApi cacheApi;
   
   @Inject
-  public AuthRepo(SessionManager sessionManager) {
-    this.sessionManager = sessionManager;
+  public AuthRepo(@NamedCache("session-cache") CacheApi cacheApi) {
+    this.cacheApi = cacheApi;
   }
   
   /**
@@ -60,6 +64,184 @@ public class AuthRepo {
     
     return user;
   }
+  
+  
+  /**
+   * Allows one to generate a unique session key.
+   * @return A string containing the new session key.
+   * @throws NoSuchAlgorithmException 
+   */
+  protected String generateSessionKey() throws NoSuchAlgorithmException {
+    String input, key = null;
+    SecureRandom random = new SecureRandom();
+    String time = DateTimeConstants.DATETIME_FORMATTER.format(new Date());
+    
+    // try to generate a new session key
+    while (key == null) {
+      input = String.format("%s-%d", time, random.nextInt(10000000));
+      key = HashProvider.base64HashOf(input);
+      // check if the key exists
+      if (getSession(key) != null)
+        // not found yet
+        key = null;
+    }
+    
+    return key;
+  }
+  
+  /**
+   * Attempts to create a new session for the given user.
+   * @param user
+   * @return
+   * @throws NoSuchAlgorithmException 
+   */
+  public Session createSession(User user) throws NoSuchAlgorithmException {
+    // try to find an open session for this user (i.e. recycle old sessions)
+    Session session = findOpenSession(user);
+    
+    // if we couldn't find an open session, create one
+    if (session == null) {
+      session = new Session();
+      session.setUser(user);
+      session.setStarted(new Date());
+      session.setKey(generateSessionKey());
+      session.setExpired(false);
+    }
+    // set the (new) expiry date/time
+    session.touch();
+    
+    // save the session to the database
+    Ebean.save(session);
+    // save the session to the cache
+    cacheSession(session);
+    
+    logger.debug(String.format("Created new session %s for user %s", session.getKey(), user.getEmail()));
+    
+    return session;
+  }
+  
+  
+  /**
+   * Terminates the given session.
+   * @param session
+   */
+  public void endSession(Session session) {
+    logger.debug(String.format("Ending session %s", session.getKey()));
+    // make sure we remove the session from the cache
+    uncacheSession(session);
+    // mark it as having expired
+    session.setExpired(true);
+    Ebean.save(session);
+  }
+  
+  
+  /**
+   * Stores the given session in the cache for later retrieval.
+   * @param session
+   */
+  public void cacheSession(Session session) {
+    // store the session in the cache, for a limited time
+    cacheApi.set(String.format("session.%s", session.getKey()), session, SecurityConstants.DEFAULT_SESSION_EXPIRY);
+    logger.debug(String.format("Added session %s to cache", session.getKey()));
+  }
+  
+  
+  /**
+   * If the specified session exists in the cache, this function will remove it.
+   * @param session
+   */
+  public void uncacheSession(Session session) {
+    // try to find the cached session
+    Session cached = getCachedSession(session.getKey());
+    
+    if (cached != null) {
+      cacheApi.remove(String.format("session.%s", session.getKey()));
+      logger.debug(String.format("Removed session %s from cache", session.getKey()));
+    }
+  }
+  
+  /**
+   * Attempts to retrieve the cached session associated with the specified key.
+   * @param key
+   * @return A Session object, if found; null otherwise.
+   */
+  public Session getCachedSession(String key) {
+    return cacheApi.getOrElse(String.format("session.%s", key), () -> null);
+  }
+  
+  
+  /**
+   * Tries to look up the session with the given key. First looks in the cache, and if
+   * not found, tries to look it up from the database. Automatically caches it if it
+   * finds the session in the database.
+   * @param key The session key.
+   * @return A Session object on success, or null if not found.
+   */
+  public Session getSession(String key) {
+    Session session = getCachedSession(key);
+    
+    // if we can't find it in the cache
+    if (session == null) {
+      // try find it in the database
+      session = findSessionByKey(key);
+      if (session != null) {
+        // cache it!
+        cacheSession(session);
+      }
+    }
+    
+    return session;
+  }
+  
+  
+  /**
+   * Updates the given session's expiry details in the cache. Assumes that persistence of
+   * sessions to the database will be handled elsewhere.
+   * @param session The session to update.
+   * @return The newly updated session with new expiry date.
+   */
+  public Session touchSession(Session session) {
+    Session cached = getCachedSession(session.getKey());
+    
+    // update the session expiry details
+    cached.touch();
+    // save it back to the cache
+    cacheSession(cached);
+    
+    return cached;
+  }
+  
+  
+  /**
+   * Attempts to find the first still-open session for the given user.
+   * @param user
+   * @return
+   */
+  public Session findOpenSession(User user) {
+    return Ebean.find(Session.class)
+        .where()
+          .eq("user", user)            // for this user
+          .eq("expired", false)        // non-expired sessions
+          .gt("expires", new Date())   // whose expiry date is in the future
+        .orderBy("expires desc")       // order the sessions by their expiry date with latest first
+        .setMaxRows(1)                 // we only need 1
+        .findUnique();
+  }
+  
+  
+  /**
+   * Attempts to look for unexpired sessions by way of their key in the database.
+   * @param key
+   * @return A Session object if found, or null otherwise.
+   */
+  public Session findSessionByKey(String key) {
+    return Ebean.find(Session.class)
+        .where()
+          .eq("key", key)
+          .eq("expired", false)
+        .findUnique();
+  }
+  
   
   /**
    * Attempts to find the user with the given e-mail address.
@@ -108,9 +290,8 @@ public class AuthRepo {
       throw new InvalidPasswordException(String.format("Invalid password for user with e-mail address %s", email));
     
     // create and set up the session
-    Session session = sessionManager.create();
-    session.setUser(user);
-    sessionManager.save(session, httpSession);
+    Session session = createSession(user);
+    httpSession.put(SecurityConstants.COOKIE_SESSION_ID, session.getKey());
     
     logger.debug(String.format("New session created for user %s: %s", email, session.getKey()));
     
@@ -125,7 +306,31 @@ public class AuthRepo {
    */
   public void logout(Session session, Http.Session httpSession) {
     logger.debug(String.format("Logging user %s with session key %s out", session.getUser().getEmail(), session.getKey()));
-    sessionManager.destroy(session, httpSession);
+    endSession(session);
+    if (httpSession.containsKey(SecurityConstants.COOKIE_SESSION_ID))
+      httpSession.remove(SecurityConstants.COOKIE_SESSION_ID);
+  }
+  
+  
+  /**
+   * Attempts to look up the relevant session from the given HTTP session and request information.
+   * @param httpSession
+   * @param httpRequest
+   * @return
+   */
+  public Session getSessionFromRequest(Http.Session httpSession, Http.Request httpRequest) {
+    String sessionId = null;
+    Session session = null;
+    
+    if (httpSession.containsKey(SecurityConstants.COOKIE_SESSION_ID))
+      sessionId = httpSession.get(SecurityConstants.COOKIE_SESSION_ID);
+    else if (httpRequest.hasHeader(SecurityConstants.SESSIONKEY_HEADER))
+      sessionId = httpRequest.getHeader(SecurityConstants.SESSIONKEY_HEADER);
+    
+    if (sessionId != null)
+      session = getSession(sessionId);
+    
+    return session;
   }
 
 }

@@ -7,7 +7,10 @@ import play.Logger;
 import play.libs.F;
 import play.mvc.Http;
 import play.mvc.Result;
+import play.twirl.api.Html;
+import repos.AuthRepo;
 import views.json.JsonError;
+import models.Session;
 
 import java.util.Optional;
 
@@ -17,11 +20,11 @@ import java.util.Optional;
 public class DefaultDeadboltHandler extends AbstractDeadboltHandler {
 
   private static final Logger.ALogger logger = Logger.of(DefaultDeadboltHandler.class);
-  private final SessionManager sessionManager;
+  private final AuthRepo authRepo;
 
   @Inject
-  public DefaultDeadboltHandler(SessionManager sessionManager) {
-    this.sessionManager = sessionManager;
+  public DefaultDeadboltHandler(AuthRepo authRepo) {
+    this.authRepo = authRepo;
   }
 
   @Override
@@ -31,7 +34,8 @@ public class DefaultDeadboltHandler extends AbstractDeadboltHandler {
 
   @Override
   public F.Promise<Optional<Subject>> getSubject(final Http.Context context) {
-    final Session session = sessionManager.get(context.session(), context.request());
+    // try to get the session's details from the incoming session/request data
+    final Session session = authRepo.getSessionFromRequest(context.session(), context.request());
 
     // if we have a session ID in the incoming request
     if (session != null) {
@@ -39,14 +43,14 @@ public class DefaultDeadboltHandler extends AbstractDeadboltHandler {
       return F.Promise.promise(() -> {
         // if there is a session
         logger.debug(String.format("Found session in cache for user: %s", session.getUser().toString()));
-
-        // update the session
-        sessionManager.save(session, context.session());
+        
+        // touch the session, updating its expiry details
+        Session touched = authRepo.touchSession(session);
         // keep track of the session in the context
-        context.args.put("session", session);
+        context.args.put("session", touched);
 
         // return the user for the session
-        return Optional.ofNullable(session.getUser());
+        return Optional.ofNullable(touched.getUser());
       });
     } else {
       logger.debug("No session or expired session for incoming request");
@@ -58,19 +62,17 @@ public class DefaultDeadboltHandler extends AbstractDeadboltHandler {
   @Override
   public F.Promise<Result> onAuthFailure(final Http.Context context, final String content) {
     // check the content type
-    if (context.request().hasHeader("Content-Type")) {
-      String contentType = context.request().getHeader("Content-Type");
-      
-      // if it's JSON
-      if (contentType.equals("application/json"))
-        return F.Promise.promise(() -> forbidden(new JsonError("You do not have permission to access this resource").toJsonNode()));
+    if (context.request().accepts("application/json") ||
+        (context.request().hasHeader("Content-Type") &&
+            context.request().getHeader("Content-Type").equals("application/json"))) {
+      return F.Promise.promise(() -> forbidden(new JsonError("You do not have permission to access this resource").toJsonNode()));
+    } else {
+      // otherwise return HTML
+      return F.Promise.promise(() -> forbidden(views.html.forbidden.render(
+          (Session)context.args.getOrDefault("session", null),
+          context.request()
+          )));
     }
-    
-    // otherwise return HTML
-    return F.Promise.promise(() -> forbidden(views.html.forbidden.render(
-        (Session)context.args.getOrDefault("session", null),
-        context.request()
-        )));
   }
 
 }

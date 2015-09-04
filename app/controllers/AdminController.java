@@ -9,27 +9,23 @@ import be.objectify.deadbolt.java.actions.SubjectPresent;
 import exceptions.DoesNotExistException;
 import exceptions.InvalidPasswordException;
 import forms.LoginForm;
+import models.Session;
 import play.Logger;
 import play.data.Form;
 import play.mvc.*;
 import play.twirl.api.Html;
 import repos.AuthRepo;
-import security.Session;
-import security.SessionManager;
 
 /**
  * The administrative interface for Shrty.
  */
-public class AdminController extends Controller {
+public class AdminController extends BaseController {
   
   private static final Logger.ALogger logger = Logger.of(AdminController.class);
-  private final AuthRepo authRepo;
-  private final SessionManager sessionManager;
   
   @Inject
-  public AdminController(AuthRepo authRepo, SessionManager sessionManager) {
-    this.authRepo = authRepo;
-    this.sessionManager = sessionManager;
+  public AdminController(AuthRepo authRepo) {
+    super(authRepo, null);
   }
 
   /**
@@ -38,7 +34,8 @@ public class AdminController extends Controller {
    */
   public Result index() {
     logger.debug("Index page loading...");
-    Session session = sessionManager.get(session(), request());
+    Session session = getSession();
+    
     // if there's no session, redirect the user to the login page
     if (session == null) {
       logger.debug("No session object found in incoming request");
@@ -57,7 +54,7 @@ public class AdminController extends Controller {
   @SubjectPresent
   public Result admin() {
     return ok((Html)views.html.admin.render(
-        (Session)Http.Context.current().args.getOrDefault("session", null),
+        getSession(),
         request()
         ));
   }
@@ -70,7 +67,7 @@ public class AdminController extends Controller {
   @SubjectNotPresent
   public Result showLogin() {
     return ok((Html)views.html.login.render(
-        (Session)Http.Context.current().args.getOrDefault("session", null),
+        getSession(),
         request(),
         null));
   }
@@ -119,7 +116,7 @@ public class AdminController extends Controller {
    */
   @SubjectPresent
   public Result doLogout() {
-    Session session = (Session)Http.Context.current().args.getOrDefault("session", null);
+    Session session = getSession();
     if (session != null) {
       authRepo.logout(session, session());
     }
@@ -132,7 +129,7 @@ public class AdminController extends Controller {
    */
   public Result about() {
     return ok((Html)views.html.about.render(
-        sessionManager.get(session(), request()),
+        getSession(),
         request()));
   }
 

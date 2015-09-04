@@ -14,15 +14,13 @@ import models.User;
 import models.json.JsonAddShortUrl;
 import models.json.JsonLogin;
 import models.json.JsonSignup;
+import models.Session;
 import play.Logger;
 import play.libs.Json;
 import play.mvc.BodyParser;
-import play.mvc.Controller;
-import play.mvc.Http;
 import play.mvc.Result;
 import repos.AuthRepo;
 import repos.LinkRepo;
-import security.Session;
 import views.json.JsonError;
 import views.json.JsonGenericMessage;
 import views.json.JsonLoginSuccess;
@@ -33,16 +31,13 @@ import views.json.JsonUser;
 /**
  * For handling incoming API requests.
  */
-public class APIController extends Controller {
+public class APIController extends BaseController {
   
   private static final Logger.ALogger logger = Logger.of(APIController.class);
-  private final AuthRepo authRepo;
-  private final LinkRepo linkRepo;
   
   @Inject
   public APIController(AuthRepo authRepo, LinkRepo linkRepo) {
-    this.authRepo = authRepo;
-    this.linkRepo = linkRepo;
+    super(authRepo, linkRepo);
   }
   
   /**
@@ -138,13 +133,12 @@ public class APIController extends Controller {
   
   /**
    * Allows one to add short URLs via the JSON API.
-   * @return
    */
   @SubjectPresent
   @BodyParser.Of(BodyParser.Json.class)
   public Result addShortUrl() {
     JsonAddShortUrl addShortUrl = Json.fromJson(request().body().asJson(), JsonAddShortUrl.class);
-    Session session = (Session)Http.Context.current().args.getOrDefault("session", null);
+    Session session = getSession();
     
     if (session == null) {
       logger.error("Unable to find session in context data");
@@ -165,8 +159,22 @@ public class APIController extends Controller {
   
   
   /**
+   * Allows one to delete short URLs with the specified code.
+   * @param code The short code for which to search.
+   */
+  @SubjectPresent
+  public Result deleteShortUrls(String code) {
+    logger.debug(String.format("Attempting to delete short URLs with code: %s", code));
+    
+    int deleted = linkRepo.deleteLinks(code);
+    logger.debug(String.format("Deleted %d short URL(s)", deleted));
+    
+    return ok(Json.toJson(new JsonGenericMessage(String.format("Deleted %d link(s)", deleted))));
+  }
+  
+  
+  /**
    * Attempts to perform an API-based login, where the session ID will be returned in the JSON payload.
-   * @return
    */
   @SubjectNotPresent
   @BodyParser.Of(BodyParser.Json.class)
@@ -203,11 +211,10 @@ public class APIController extends Controller {
   
   /**
    * Attempts to perform an API-based logging out of the user for whom the session is relevant.
-   * @return
    */
   @SubjectPresent
   public Result logout() {
-    Session session = (Session)Http.Context.current().args.getOrDefault("session", null);
+    Session session = getSession();
     
     if (session != null) {
       logger.debug(String.format("Attempting to end session: %s", session.getKey()));

@@ -16,6 +16,7 @@ POST       /api/user             @controllers.APIController.userSignup()
 GET        /api/shorturl         @controllers.APIController.getShortUrls(page: Integer = 0, pageSize: Integer = 10, sortBy: String = "title", sortDir: String = "asc")
 GET        /api/shorturl/:code   @controllers.APIController.getShortUrl(code: String)
 POST       /api/shorturl         @controllers.APIController.addShortUrl()
+DELETE     /api/shorturl/:code   @controllers.APIController.deleteShortUrls(code: String)
 
 POST       /api/login            @controllers.APIController.login()
 POST       /api/logout           @controllers.APIController.logout()

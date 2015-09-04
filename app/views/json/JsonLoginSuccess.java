@@ -1,7 +1,7 @@
 package views.json;
 
 import models.json.JsonObject;
-import security.Session;
+import models.Session;
 
 public class JsonLoginSuccess extends JsonObject {
   

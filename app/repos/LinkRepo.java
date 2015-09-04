@@ -16,6 +16,7 @@ import models.ShortURL;
 import models.User;
 import play.Logger;
 import play.cache.CacheApi;
+import play.cache.NamedCache;
 import security.SecurityConstants;
 
 /**
@@ -27,7 +28,7 @@ public class LinkRepo {
   private final CacheApi cacheApi;
   
   @Inject
-  public LinkRepo(CacheApi cacheApi) {
+  public LinkRepo(@NamedCache("url-cache") CacheApi cacheApi) {
     this.cacheApi = cacheApi;
   }
   
@@ -82,6 +83,26 @@ public class LinkRepo {
     
     logger.debug(String.format("Created new short URL: %s", result.toString()));    
     return result;
+  }
+  
+  
+  /**
+   * Attempts to delete all of the links with the given short code.
+   * @param shortCode
+   * @return
+   */
+  public int deleteLinks(String shortCode) {
+    logger.debug(String.format("Attempting to delete all links with short code: %s", shortCode));
+    // make sure we remove any entries from the cache
+    ShortURL cached = getCachedLink(shortCode);
+    if (cached != null) {
+      logger.debug("Also removing link from cache...");
+      uncacheLink(cached);
+    }
+    return Ebean.delete(Ebean.find(ShortURL.class)
+      .where()
+        .eq("shortCode", shortCode)
+      .findList());
   }
   
   

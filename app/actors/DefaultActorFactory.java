@@ -37,4 +37,10 @@ public class DefaultActorFactory implements ActorFactory {
     return hitCounterActor;
   }
 
+  @Override
+  public ActorRef getSessionManagerActor() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
 }
