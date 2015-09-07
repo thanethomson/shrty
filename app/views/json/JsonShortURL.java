@@ -16,6 +16,7 @@ public class JsonShortURL extends JsonObject {
   public Long hitCount = null;
   public String created = null;
   public JsonUser createdBy = null;
+  public Boolean primary = null;
 
   public JsonShortURL() {}
   
@@ -27,6 +28,7 @@ public class JsonShortURL extends JsonObject {
     this.hitCount = shortUrl.getHitCount();
     this.created = (shortUrl.getCreated() != null) ? DateTimeConstants.DATETIME_FORMATTER.format(shortUrl.getCreated()) : null;
     this.createdBy = (shortUrl.getCreatedBy() != null) ? new JsonUser(shortUrl.getCreatedBy()) : null;
+    this.primary = shortUrl.getPrimary();
   }
 
 }

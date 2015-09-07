@@ -18,8 +18,6 @@ import caching.CacheManager;
 import models.ShortURL;
 import models.User;
 import play.Logger;
-import play.cache.CacheApi;
-import play.cache.NamedCache;
 import security.SecurityConstants;
 
 /**

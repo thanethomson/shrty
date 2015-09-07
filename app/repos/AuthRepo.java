@@ -15,8 +15,6 @@ import exceptions.DoesNotExistException;
 import exceptions.InvalidPasswordException;
 import models.User;
 import play.Logger;
-import play.cache.CacheApi;
-import play.cache.NamedCache;
 import play.mvc.Http;
 import models.Session;
 import security.SecurityConstants;
@@ -131,9 +129,21 @@ public class AuthRepo {
     logger.debug(String.format("Ending session %s", session.getKey()));
     // make sure we remove the session from the cache
     uncacheSession(session);
+    // we need the version of the session loaded from the database - can't trust the cache
+    session = findSessionById(session.getId());
     // mark it as having expired
     session.setExpired(true);
     Ebean.save(session);
+  }
+  
+  
+  /**
+   * Attempts to find the session with the given database ID.
+   * @param id The database ID of the session.
+   * @return A Session object if found, or null otherwise.
+   */
+  public Session findSessionById(long id) {
+    return Ebean.find(Session.class).where().idEq(id).findUnique();
   }
   
   

@@ -6,8 +6,11 @@ import be.objectify.deadbolt.core.models.Subject;
 import com.avaje.ebean.Model;
 import play.data.validation.*;
 import utils.DateTimeConstants;
+import views.json.JsonUser;
 
 import javax.persistence.*;
+
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -42,6 +45,30 @@ public class User extends Model implements Subject {
 
     /** The date/time at which this entry was first created. */
     private Date created;
+    
+    
+    public User() {
+      super();
+    }
+    
+    /**
+     * Constructor to build up properties from the given JSON user object.
+     * @param jsonUser
+     */
+    public User(JsonUser jsonUser) {
+      super();
+      setId(jsonUser.id);
+      setFirstName(jsonUser.firstName);
+      setLastName(jsonUser.lastName);
+      setEmail(jsonUser.email);
+      if (jsonUser.created != null) {
+        try {
+          setCreated(DateTimeConstants.DATETIME_FORMATTER.parse(jsonUser.created));
+        } catch (ParseException e) {
+          setCreated(null);
+        }
+      }
+    }
 
     
     @Override

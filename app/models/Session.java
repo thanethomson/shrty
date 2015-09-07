@@ -1,5 +1,6 @@
 package models;
 
+import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -11,6 +12,7 @@ import javax.persistence.Table;
 
 import com.avaje.ebean.Model;
 
+import models.json.JsonSession;
 import security.SecurityConstants;
 import utils.DateTimeConstants;
 
@@ -41,7 +43,42 @@ public class Session extends Model {
   
   /** Has this session expired yet? */
   private Boolean expired;
-
+  
+  
+  public Session() {
+    super();
+  }
+  
+  
+  /**
+   * Constructor to build up session object properties from the given JSON object.
+   * @param jsonSession
+   */
+  public Session(JsonSession jsonSession) {
+    super();
+    setId(jsonSession.id);
+    if (jsonSession.user != null) {
+      setUser(new User(jsonSession.user));
+    }
+    if (jsonSession.started != null) {
+      try {
+        setStarted(DateTimeConstants.DATETIME_FORMATTER.parse(jsonSession.started));
+      } catch (ParseException e) {
+        setStarted(null);
+      }
+    }
+    if (jsonSession.expires != null) {
+      try {
+        setExpires(DateTimeConstants.DATETIME_FORMATTER.parse(jsonSession.expires));
+      } catch (ParseException e) {
+        setExpires(null);
+      }
+    }
+    setKey(jsonSession.key);
+    setExpired(jsonSession.expired);
+  }
+  
+  
   
   @Override
   public String toString() {

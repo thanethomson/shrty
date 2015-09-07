@@ -3,8 +3,11 @@ package models;
 import com.avaje.ebean.Model;
 import play.data.validation.*;
 import utils.DateTimeConstants;
+import views.json.JsonShortURL;
 
 import javax.persistence.*;
+
+import java.text.ParseException;
 import java.util.Date;
 
 /**
@@ -45,6 +48,32 @@ public class ShortURL extends Model {
     /** Is this the primary short URL entry for this short code? */
     @Column(name="is_primary")
     private Boolean primary;
+    
+    
+    public ShortURL() {
+      super();
+    }
+    
+    
+    public ShortURL(JsonShortURL jsonUrl) {
+      super();
+      setId(jsonUrl.id);
+      setTitle(jsonUrl.title);
+      setShortCode(jsonUrl.shortCode);
+      setUrl(jsonUrl.url);
+      setHitCount(jsonUrl.hitCount);
+      if (jsonUrl.created != null) {
+        try {
+          setCreated(DateTimeConstants.DATETIME_FORMATTER.parse(jsonUrl.created));
+        } catch (ParseException e) {
+          setCreated(null);
+        }
+      }
+      if (jsonUrl.createdBy != null) {
+        setCreatedBy(new User(jsonUrl.createdBy));
+      }
+      setPrimary(jsonUrl.primary);
+    }
 
     
     @Override
