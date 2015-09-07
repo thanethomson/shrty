@@ -8,6 +8,7 @@ import com.avaje.ebean.Ebean;
 import com.avaje.ebean.QueryIterator;
 import com.google.inject.Inject;
 
+import caching.CacheManager;
 import crypto.HashProvider;
 import exceptions.AlreadyExistsException;
 import exceptions.DoesNotExistException;
@@ -27,11 +28,11 @@ import utils.DateTimeConstants;
 public class AuthRepo {
   
   private static final Logger.ALogger logger = Logger.of(AuthRepo.class);
-  private final CacheApi cacheApi;
+  private final CacheManager cacheManager;
   
   @Inject
-  public AuthRepo(@NamedCache("session-cache") CacheApi cacheApi) {
-    this.cacheApi = cacheApi;
+  public AuthRepo(CacheManager cacheManager) {
+    this.cacheManager = cacheManager;
   }
   
   /**
@@ -192,7 +193,7 @@ public class AuthRepo {
    */
   public void cacheSession(Session session) {
     // store the session in the cache, for a limited time
-    cacheApi.set(session.getKey(), session, SecurityConstants.DEFAULT_SESSION_EXPIRY);
+    cacheManager.storeSession(session);
     logger.debug(String.format("Added session %s to cache", session.getKey()));
   }
   
@@ -206,7 +207,7 @@ public class AuthRepo {
     Session cached = getCachedSession(session.getKey());
     
     if (cached != null) {
-      cacheApi.remove(session.getKey());
+      cacheManager.removeSession(cached);
       logger.debug(String.format("Removed session %s from cache", session.getKey()));
     }
   }
@@ -217,7 +218,7 @@ public class AuthRepo {
    * @return A Session object, if found; null otherwise.
    */
   public Session getCachedSession(String key) {
-    return cacheApi.getOrElse(key, () -> null);
+    return cacheManager.findSession(key);
   }
   
   

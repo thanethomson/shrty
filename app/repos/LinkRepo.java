@@ -14,6 +14,7 @@ import com.avaje.ebean.ExpressionList;
 import com.avaje.ebean.QueryIterator;
 import com.google.inject.Inject;
 
+import caching.CacheManager;
 import models.ShortURL;
 import models.User;
 import play.Logger;
@@ -27,11 +28,11 @@ import security.SecurityConstants;
 public class LinkRepo {
   
   private static final Logger.ALogger logger = Logger.of(LinkRepo.class);
-  private final CacheApi cacheApi;
+  private final CacheManager cacheManager;
   
   @Inject
-  public LinkRepo(@NamedCache("url-cache") CacheApi cacheApi) {
-    this.cacheApi = cacheApi;
+  public LinkRepo(CacheManager cacheManager) {
+    this.cacheManager = cacheManager;
   }
   
   /**
@@ -301,7 +302,7 @@ public class LinkRepo {
    * @param shortUrl
    */
   public void cacheLink(ShortURL shortUrl) {
-    cacheApi.set(shortUrl.getShortCode(), shortUrl);
+    cacheManager.storeUrl(shortUrl);
     logger.debug(String.format("Cached short URL entry for code: %s", shortUrl.getShortCode()));
   }
   
@@ -311,7 +312,7 @@ public class LinkRepo {
    * @return A ShortURL object on success, or null if it could not be found.
    */
   public ShortURL getCachedLink(String shortCode) {
-    return cacheApi.getOrElse(shortCode, () -> null);
+    return cacheManager.findUrl(shortCode);
   }
   
   /**
@@ -319,11 +320,7 @@ public class LinkRepo {
    * @param shortUrl
    */
   public void uncacheLink(ShortURL shortUrl) {
-    String path = shortUrl.getShortCode();
-    if (cacheApi.getOrElse(path, () -> null) != null) {
-      cacheApi.remove(path);
-      logger.debug(String.format("Removed short URL entry from cache: %s", shortUrl.getShortCode()));
-    }
+    cacheManager.removeUrl(shortUrl);
   }
   
   /**
@@ -333,7 +330,13 @@ public class LinkRepo {
    * @return A ShortURL object on success, or null on failure.
    */
   public ShortURL cachedLinkLookup(String shortCode) {
-    ShortURL result = cacheApi.getOrElse(shortCode, () -> findLinkByShortCode(shortCode));
+    ShortURL result = getCachedLink(shortCode);
+    
+    // if we can't find it in the cache
+    if (result == null) {
+      // look for it in the database
+      result = findLinkByShortCode(shortCode);
+    }
     
     // if we found the relevant link
     if (result != null) {

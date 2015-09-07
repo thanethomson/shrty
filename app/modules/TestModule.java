@@ -4,6 +4,8 @@ import com.google.inject.AbstractModule;
 
 import actors.ActorFactory;
 import actors.DefaultActorFactory;
+import caching.CacheManager;
+import caching.EHCacheManager;
 import play.Logger;
 
 /**
@@ -18,6 +20,8 @@ public class TestModule extends AbstractModule {
     logger.debug("Initialising application with TestModule DI");
     // set up the actor factory
     bind(ActorFactory.class).to(DefaultActorFactory.class).asEagerSingleton();
+    // set up the caching system
+    bind(CacheManager.class).to(EHCacheManager.class).asEagerSingleton();
   }
 
 }
