@@ -5,6 +5,7 @@ import java.security.SecureRandom;
 import java.util.Date;
 
 import com.avaje.ebean.Ebean;
+import com.avaje.ebean.QueryIterator;
 import com.google.inject.Inject;
 
 import crypto.HashProvider;
@@ -136,12 +137,62 @@ public class AuthRepo {
   
   
   /**
+   * Runs through all sessions in the database that look like they should have
+   * expired, and expires them if necessary.
+   * @return
+   */
+  public int checkExpiredSessions() {
+    int updateCount = 0;
+    logger.debug("Attempting to check for expired sessions in the database...");
+    
+    Ebean.beginTransaction();
+    Date now = new Date();
+    
+    try {
+      QueryIterator<Session> iterator = Ebean.find(Session.class)
+          .where()
+            .eq("expired", false)
+            .lt("expires", now)
+          .findIterate();
+      Session session, cached;
+      
+      try {
+        while (iterator.hasNext()) {
+          session = iterator.next(); 
+          
+          // if we have a cached version of this session
+          cached = getCachedSession(session.getKey());
+          if (cached != null && cached.getExpires().before(now)) {
+            // update the stored expiry date of the session if it's different to the cached version
+            if (cached.getExpires().compareTo(session.getExpires()) == 0) {
+              session.setExpires(cached.getExpires());
+              Ebean.save(session);
+            }
+          } else {
+            logger.debug(String.format("Session with key %s has now expired", session.getKey()));
+            endSession(session);
+          }
+        }
+      } finally {
+        iterator.close();
+      }
+      
+    } finally {
+      Ebean.endTransaction();
+    }
+    
+    logger.debug(String.format("Updated %d entries in session database", updateCount));
+    return updateCount;
+  }
+  
+  
+  /**
    * Stores the given session in the cache for later retrieval.
    * @param session
    */
   public void cacheSession(Session session) {
     // store the session in the cache, for a limited time
-    cacheApi.set(String.format("session.%s", session.getKey()), session, SecurityConstants.DEFAULT_SESSION_EXPIRY);
+    cacheApi.set(session.getKey(), session, SecurityConstants.DEFAULT_SESSION_EXPIRY);
     logger.debug(String.format("Added session %s to cache", session.getKey()));
   }
   
@@ -155,7 +206,7 @@ public class AuthRepo {
     Session cached = getCachedSession(session.getKey());
     
     if (cached != null) {
-      cacheApi.remove(String.format("session.%s", session.getKey()));
+      cacheApi.remove(session.getKey());
       logger.debug(String.format("Removed session %s from cache", session.getKey()));
     }
   }
@@ -166,7 +217,7 @@ public class AuthRepo {
    * @return A Session object, if found; null otherwise.
    */
   public Session getCachedSession(String key) {
-    return cacheApi.getOrElse(String.format("session.%s", key), () -> null);
+    return cacheApi.getOrElse(key, () -> null);
   }
   
   

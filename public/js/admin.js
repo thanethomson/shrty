@@ -50,14 +50,20 @@ var Shrty = function(baseUrl, sessionKey) {
 			}, instance.filterDelay);
 		});
 		$('#addUrlSaveBtn').click(function() {
-			instance.addUrl($('#titleInput').val(), $('#urlInput').val(), $('#shortCodeInput').val() ? $('#shortCodeInput').val() : null,
-				function(data) {
-					console.log(JSON.stringify(data));
-					// update the URLs
-					instance.fetchUrls();
-					// close the modal window
-					$('#addUrlModal').modal('hide');
-				});
+			if (!$('#titleInput').val()) {
+				window.alert('Please enter a valid title for the link');
+			} else if (!$('#urlInput').val()) {
+				window.alert('Please enter a valid URL for the link');
+			} else {
+				instance.addUrl($('#titleInput').val(), $('#urlInput').val(), $('#shortCodeInput').val() ? $('#shortCodeInput').val() : null,
+						function(data) {
+							console.log(JSON.stringify(data));
+							// update the URLs
+							instance.fetchUrls();
+							// close the modal window
+							$('#addUrlModal').modal('hide');
+						});
+			}
 		});
 		// fetch the first page of URLs
 		instance.fetchUrls();

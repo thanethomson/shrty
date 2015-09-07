@@ -301,7 +301,7 @@ public class LinkRepo {
    * @param shortUrl
    */
   public void cacheLink(ShortURL shortUrl) {
-    cacheApi.set(String.format("url.%s", shortUrl.getShortCode()), shortUrl);
+    cacheApi.set(shortUrl.getShortCode(), shortUrl);
     logger.debug(String.format("Cached short URL entry for code: %s", shortUrl.getShortCode()));
   }
   
@@ -311,7 +311,7 @@ public class LinkRepo {
    * @return A ShortURL object on success, or null if it could not be found.
    */
   public ShortURL getCachedLink(String shortCode) {
-    return cacheApi.getOrElse(String.format("url.%s", shortCode), () -> null);
+    return cacheApi.getOrElse(shortCode, () -> null);
   }
   
   /**
@@ -319,7 +319,7 @@ public class LinkRepo {
    * @param shortUrl
    */
   public void uncacheLink(ShortURL shortUrl) {
-    String path = String.format("url.%s", shortUrl.getShortCode());
+    String path = shortUrl.getShortCode();
     if (cacheApi.getOrElse(path, () -> null) != null) {
       cacheApi.remove(path);
       logger.debug(String.format("Removed short URL entry from cache: %s", shortUrl.getShortCode()));
@@ -333,7 +333,7 @@ public class LinkRepo {
    * @return A ShortURL object on success, or null on failure.
    */
   public ShortURL cachedLinkLookup(String shortCode) {
-    ShortURL result = cacheApi.getOrElse(String.format("url.%s", shortCode), () -> findLinkByShortCode(shortCode));
+    ShortURL result = cacheApi.getOrElse(shortCode, () -> findLinkByShortCode(shortCode));
     
     // if we found the relevant link
     if (result != null) {
