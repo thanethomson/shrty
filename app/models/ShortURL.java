@@ -41,6 +41,10 @@ public class ShortURL extends Model {
     /** The user who created this short URL. */
     @ManyToOne
     private User createdBy;
+    
+    /** Is this the primary short URL entry for this short code? */
+    @Column(name="is_primary")
+    private Boolean primary;
 
     
     @Override
@@ -56,6 +60,7 @@ public class ShortURL extends Model {
       buf.append(String.format("  hitCount  = %d%s", hitCount, newline));
       buf.append(String.format("  created   = %s%s", (created != null) ? DateTimeConstants.DATETIME_FORMATTER.format(created) : "null", newline));
       buf.append(String.format("  createdBy = %s%s", (createdBy != null) ? createdBy.toString() : "null", newline));
+      buf.append(String.format("  primary   = %s%s", getPrimary() ? "true" : "false", newline));
       buf.append("}"+newline);
       
       return buf.toString();
@@ -116,5 +121,15 @@ public class ShortURL extends Model {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+
+    public Boolean getPrimary() {
+      return primary;
+    }
+
+
+    public void setPrimary(Boolean primary) {
+      this.primary = primary;
     }
 }

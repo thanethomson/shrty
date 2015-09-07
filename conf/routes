@@ -14,7 +14,7 @@ GET        /about                @controllers.AdminController.about()
 GET        /api/user/:email      @controllers.APIController.getUserByEmail(email: String)
 POST       /api/user             @controllers.APIController.userSignup()
 
-GET        /api/shorturl         @controllers.APIController.getShortUrls(page: Integer = 0, pageSize: Integer = 10, sortBy: String = "title", sortDir: String = "asc")
+GET        /api/shorturl         @controllers.APIController.getShortUrls(query: String ?= "", page: Integer ?= 0, pageSize: Integer ?= 10, sortBy: String ?= "title", sortDir: String ?= "asc")
 GET        /api/shorturl/:code   @controllers.APIController.getShortUrl(code: String)
 POST       /api/shorturl         @controllers.APIController.addShortUrl()
 DELETE     /api/shorturl/:code   @controllers.APIController.deleteShortUrls(code: String)

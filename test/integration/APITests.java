@@ -255,8 +255,8 @@ public class APITests extends WithServer {
     response = deleteRequest("/api/shorturl/MyCode", sessionId);
     assertEquals(200, response.getStatus());
     
-    // now make sure that there are 0 entries in the database for the "MyCode" short code
-    assertEquals(0, Ebean.find(ShortURL.class).where().eq("shortCode", shortUrl.shortCode).findRowCount());
+    // now make sure that there are 0 primary entries in the database for the "MyCode" short code
+    assertEquals(0, Ebean.find(ShortURL.class).where().eq("primary", true).eq("shortCode", shortUrl.shortCode).findRowCount());
   }
   
   

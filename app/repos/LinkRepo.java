@@ -9,6 +9,8 @@ import java.util.Set;
 import org.hashids.Hashids;
 
 import com.avaje.ebean.Ebean;
+import com.avaje.ebean.Expr;
+import com.avaje.ebean.ExpressionList;
 import com.avaje.ebean.QueryIterator;
 import com.google.inject.Inject;
 
@@ -66,6 +68,10 @@ public class LinkRepo {
    */
   public ShortURL createLink(String title, String url, String shortCode, User user) {
     String code = (shortCode != null && shortCode.length() > 0) ? shortCode : generateUniqueShortCode();
+    
+    // first make all other links for this short code secondary
+    makeSecondary(code);
+    
     ShortURL result = new ShortURL();
     
     result.setTitle(title);
@@ -74,6 +80,8 @@ public class LinkRepo {
     result.setHitCount(0L);
     result.setCreated(new Date());
     result.setCreatedBy(user);
+    // this is now the primary link
+    result.setPrimary(true);
     
     // save the short URL to the database
     Ebean.save(result);
@@ -83,6 +91,30 @@ public class LinkRepo {
     
     logger.debug(String.format("Created new short URL: %s", result.toString()));    
     return result;
+  }
+  
+  
+  /**
+   * Makes all of the links with the specified short code secondary.
+   * @param shortCode
+   * @return The number of links updated.
+   * 
+   * @todo Figure out a way to optimise this.
+   */
+  public int makeSecondary(String shortCode) {
+    final int[] count = {0};
+    
+    Ebean.find(ShortURL.class)
+      .where()
+        .eq("shortCode", shortCode)
+      .findEach((ShortURL url) -> {
+        url.setPrimary(false);
+        Ebean.save(url);
+        count[0]++;
+      });
+    
+    logger.debug(String.format("%d link(s) made secondary", count[0]));
+    return count[0];
   }
   
   
@@ -107,15 +139,43 @@ public class LinkRepo {
   
   
   /**
+   * Internal helper function to build up an ExpressionList object for a short URL query.
+   * @param query
+   * @param page
+   * @param pageSize
+   * @param sortBy
+   * @param sortDir
+   * @return
+   */
+  protected ExpressionList<ShortURL> buildLinkFetchExpr(String query, int page, int pageSize, String sortBy, String sortDir) {
+    ExpressionList<ShortURL> e = Ebean.find(ShortURL.class).where().eq("primary", true);
+    
+    // if we have a query, build up the filtering criteria
+    if (query != null && query.length() > 0) {
+      e = e.or(
+          Expr.ilike("title", String.format("%%%s%%", query)),
+          Expr.or(
+             Expr.ilike("shortCode", String.format("%%%s%%", query)),
+             Expr.ilike("url", String.format("%%%s%%", query)))
+          );
+    }
+    
+    return e;
+  }
+  
+  
+  /**
    * Allows for paged retrieval of links.
+   * @param query A case-insensitive search query by which to filter URLs.
    * @param page The page number to retrieve (starting from 0).
    * @param pageSize The number of links to retrieve per page.
    * @param sortBy The column by which to sort links.
    * @param sortDir The sort direction (asc|desc).
    * @return
    */
-  public List<ShortURL> getLinks(int page, int pageSize, String sortBy, String sortDir) {
-    return Ebean.find(ShortURL.class)
+  public List<ShortURL> getLinks(String query, int page, int pageSize, String sortBy, String sortDir) {
+    logger.debug(String.format("Attempting to fetch page %d of links, page size %d, sorted by %s %s", page, pageSize, sortBy, sortDir));
+    return buildLinkFetchExpr(query, page, pageSize, sortBy, sortDir)
         .orderBy(String.format("%s %s", sortBy, sortDir))
         .findPagedList(page, pageSize)
         .getList();
@@ -180,8 +240,8 @@ public class LinkRepo {
    */
   public List<ShortURL> getUniqueShortCodes() {
     return Ebean.find(ShortURL.class)
-        .select("shortCode")
-        .setDistinct(true)
+        .where()
+          .eq("primary", true)
         .findList();
   }
   
@@ -197,12 +257,26 @@ public class LinkRepo {
   
   
   /**
+   * Helper function to get the number of primary links for the given query.
+   * @param query
+   * @param page
+   * @param pageSize
+   * @param sortBy
+   * @param sortDir
+   * @return
+   */
+  public long getLinkCount(String query, int page, int pageSize, String sortBy, String sortDir) {
+    return buildLinkFetchExpr(query, page, pageSize, sortBy, sortDir).findRowCount();
+  }
+  
+  
+  /**
    * Retrieves the total number of unique links in the database.
    */
   public long getUniqueLinkCount() {
     return Ebean.find(ShortURL.class)
-        .select("shortCode")
-        .setDistinct(true)
+        .where()
+          .eq("primary", true)
         .findRowCount();
   }
   
@@ -215,6 +289,7 @@ public class LinkRepo {
   public ShortURL findLinkByShortCode(String shortCode) {
     return Ebean.find(ShortURL.class)
         .where()
+          .eq("primary", true)
           .eq("shortCode", shortCode)
           .orderBy("created desc")
         .setMaxRows(1)

@@ -31,7 +31,7 @@ public class HitCounterActor extends UntypedActor {
   @Override
   public void onReceive(Object message) throws Exception {
     if (message instanceof String && ((String)message).equals("Tick")) {
-      logger.debug("Hit counter actor tick");
+      //logger.debug("Hit counter actor tick");
       
       // we include this check just in case it takes us longer than the update interval to
       // actually perform the hit counter update - so we don't flood the actor with a

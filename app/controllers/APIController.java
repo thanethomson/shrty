@@ -116,6 +116,7 @@ public class APIController extends BaseController {
   
   /**
    * Allows one to request a paged listing of all of the short URLs via the API.
+   * @param query A case-insensitive search string by which to filter URLs.
    * @param page The page number to retrieve (starting from 0).
    * @param pageSize The number of records to retrieve per page.
    * @param sortBy The column by which to sort the records.
@@ -123,7 +124,7 @@ public class APIController extends BaseController {
    * @return
    */
   @SubjectPresent
-  public Result getShortUrls(Integer page, Integer pageSize, String sortBy, String sortDir) {
+  public Result getShortUrls(String query, Integer page, Integer pageSize, String sortBy, String sortDir) {
     // make sure the sortBy field is valid
     if (!sortBy.matches("^(title|shortCode|url|hitCount|created|createdBy)$")) {
       logger.error(String.format("Logging invalid incoming sortBy value: %s", sortBy));
@@ -135,15 +136,16 @@ public class APIController extends BaseController {
       return badRequest(Json.toJson(new JsonError("Invalid sort direction for sortDir")));
     }
     
+    logger.debug(String.format("Getting short URLs, page %d, page size %d, sorted by %s %s", page, pageSize, sortBy, sortDir));
+    
     // try to get the relevant page of links
     return ok(Json.toJson(new JsonShortURLPage(
         page,
         pageSize,
-        linkRepo.getLinkCount(),
-        linkRepo.getUniqueLinkCount(),
+        linkRepo.getLinkCount(query, page, pageSize, sortBy, sortDir),
         sortBy,
         sortDir,
-        linkRepo.getLinks(page, pageSize, sortBy, sortDir))));
+        linkRepo.getLinks(query, page, pageSize, sortBy, sortDir))));
   }
   
   
@@ -198,10 +200,10 @@ public class APIController extends BaseController {
    */
   @SubjectPresent
   public Result deleteShortUrls(String code) {
-    logger.debug(String.format("Attempting to delete short URLs with code: %s", code));
+    logger.debug(String.format("Attempting to hide short URLs with code: %s", code));
     
-    int deleted = linkRepo.deleteLinks(code);
-    logger.debug(String.format("Deleted %d short URL(s)", deleted));
+    int deleted = linkRepo.makeSecondary(code);
+    logger.debug(String.format("Hid %d short URL(s)", deleted));
     
     return ok(Json.toJson(new JsonGenericMessage(String.format("Deleted %d link(s)", deleted))));
   }
