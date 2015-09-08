@@ -10,6 +10,10 @@ POST       /login                @controllers.AdminController.doLogin()
 GET        /logout               @controllers.AdminController.doLogout()
 GET        /about                @controllers.AdminController.about()
 
+# API Docs
+GET        /api                  @controllers.APIDocController.showHumanReadable()
+GET        /api.raml             @controllers.APIDocController.showRaml()
+
 # API
 GET        /api/user/:email      @controllers.APIController.getUserByEmail(email: String)
 POST       /api/user             @controllers.APIController.userSignup()

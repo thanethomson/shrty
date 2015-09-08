@@ -1,0 +1,9 @@
+@(actionType: org.raml.model.ActionType)
+@import org.raml.model._
+@actionType match {
+    case ActionType.GET => {label-success}
+    case ActionType.PUT => {label-info}
+    case ActionType.POST => {label-primary}
+    case ActionType.DELETE => {label-danger}
+    case _ => {label-warning}
+}

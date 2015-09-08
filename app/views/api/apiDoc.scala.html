@@ -1,0 +1,80 @@
+@(session: models.Session, request: play.mvc.Http.Request, raml: org.raml.model.Raml, schemas: Map[String, utils.jsonschema.JsonSchemaObject])
+@import org.raml.model._
+@import com.github.rjeschke.txtmark._
+@header = {
+	<!-- Highlight.js -->
+    <link href='@routes.WebJarAssets.at(WebJarAssets.locate("styles/github.css"))' rel="stylesheet" />
+
+    <!-- Custom styles for this template -->
+    <link href='@routes.Assets.versioned("stylesheets/theme.css")' rel="stylesheet" />
+}
+
+@footer = {
+	<script src='@routes.WebJarAssets.at(WebJarAssets.locate("highlight.pack.js"))'></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+}
+
+@base(session, request, "API", "api", header=header, footer=footer) {
+    <div class="container">
+        
+        <h1>@raml.getTitle</h1>
+        
+        <p>&nbsp;</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-striped">
+                    <tr>
+                        <th>Version</th>
+                        <td>@raml.getVersion</td>
+                    </tr>
+                    <tr>
+                        <th>Base URI</th>
+                        <td>http://@request.host@request.path</td>
+                    </tr>
+                    <tr>
+                        <th>Media Type</th>
+                        <td>@raml.getMediaType</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <p>&nbsp;</p>
+        
+        @for(d <- raml.getDocumentation) {
+            <h2>@d.getTitle</h2>
+            
+            <p>
+                @Html(Processor.process(d.getContent))
+            </p>
+            
+            <p>&nbsp;</p>
+        }
+        
+        <h2>API</h2>
+        
+        @for((path,resource) <- raml.getResources) {
+            <h4>@resource.getDisplayName <code>@path</code></h4>
+            <div class="row">
+                <div class="col-md-12">
+                    @apiEntry(resource)
+                </div>
+            </div>
+            <p>&nbsp;</p>
+        }
+        
+        <h2>Schemas</h2>
+        
+        <p>
+            Note that properties marked with a <span class="glyphicon glyphicon-asterisk required"></span>
+            are required and must be supplied with requests.
+        </p>
+        <p>&nbsp;</p>
+        
+        @for((name, schema) <- schemas) {
+            @jsonSchema(name, schema)
+        }
+    
+    </div>
+}

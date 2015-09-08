@@ -1,0 +1,21 @@
+@(properties: Map[String, utils.jsonschema.JsonSchema], level: Integer)
+@import utils.jsonschema._
+@for((name,prop) <- properties) {
+    <div class="row">
+        <div class="col-md-3">
+            @for(i <- 1 to level) {&nbsp;&nbsp;&nbsp;&nbsp;}
+            <span class="glyphicon glyphicon-expand" aria-hidden="true"></span>
+            <i>@name</i> @if(prop.required) { <span class="glyphicon glyphicon-asterisk required"></span> }</div>
+        <div class="col-md-9">
+            @jsonSchemaProperty(prop)
+        </div>
+    </div>
+    @if(prop._type == JsonSchemaType.OBJECT) {
+        @defining(prop.asInstanceOf[JsonSchemaObject]) { obj =>
+            @jsonSchemaSubObject(obj.properties, level+1)
+        }
+    }
+}
+@if(level > 0) {
+    <p>&nbsp;</p>
+}

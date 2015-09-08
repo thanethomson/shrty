@@ -17,6 +17,7 @@
   <logger name="controllers.AdminController" level="DEBUG" />
   <logger name="controllers.APIController" level="DEBUG" />
   <logger name="controllers.URLController" level="DEBUG" />
+  <logger name="controllers.APIDocController" level="DEBUG" />
   <logger name="repos.AuthRepo" level="DEBUG" />
   <logger name="repos.LinkRepo" level="DEBUG" />
   <logger name="security.CacheSessionManager" level="DEBUG" />

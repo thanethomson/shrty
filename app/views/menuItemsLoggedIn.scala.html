@@ -1,4 +1,5 @@
 @(section: String)
 <li @if(section=="admin"){class="active"}><a href="@routes.AdminController.admin()">Administration</a></li>
+<li @if(section=="api"){class="active"}><a href="@routes.APIDocController.showHumanReadable()">API</a></li>
 <li @if(section=="about"){class="active"}><a href="@routes.AdminController.about()">About</a></li>
 <li><a href="@routes.AdminController.doLogout()">Logout</a>

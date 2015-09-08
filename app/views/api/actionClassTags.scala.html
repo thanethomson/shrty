@@ -1,0 +1,4 @@
+@(resource: org.raml.model.Resource)
+@for((actionType, action) <- resource.getActions) {
+    <span class="label @actionClass(actionType).toString.trim">@actionType</span>
+}

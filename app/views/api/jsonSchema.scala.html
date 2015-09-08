@@ -1,0 +1,33 @@
+@(name: String, schema: utils.jsonschema.JsonSchemaObject)
+@import utils.jsonschema._
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <a name="schemas_@name">@name</a>
+    </div>
+    <div class="panel-body">
+        @if(schema.title != null) {
+            <div class="row">
+                <div class="col-md-2"><b>Title</b></div>
+                <div class="col-md-10">@schema.title</div>
+            </div>
+        }
+        @if(schema.description != null) {
+            <div class="row">
+                <div class="col-md-2"><b>Description</b></div>
+                <div class="col-md-10">@schema.description</div>
+            </div>
+        }
+        @if(schema.properties != null) {
+            <div class="row">
+                <div class="col-md-2"><b>Properties</b></div>
+                <div class="col-md-10">
+                    <div class="row">
+                        <div class="col-md-3"><b>Name</b></div>
+                        <div class="col-md-9"><b>Description</b></div>
+                    </div>
+                    @jsonSchemaSubObject(schema.properties, 0)
+                </div>
+            </div>
+        }
+    </div>
+</div>

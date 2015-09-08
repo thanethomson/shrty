@@ -1,0 +1,40 @@
+@(property: utils.jsonschema.JsonSchema)
+@import utils.jsonschema._
+<b>@property._type</b>.
+@if(property.description != null) { @property.description }
+@if(property._type == JsonSchemaType.STRING) {
+    @defining(property.asInstanceOf[JsonSchemaString]) { obj =>
+        @if(obj._default != null) { Default: "@obj._default". }
+        @if(obj.minLength != null) { Min length: @obj.minLength. }
+        @if(obj.maxLength != null) { Max length: @obj.maxLength. }
+    }
+}
+@if(property._type == JsonSchemaType.NUMBER) {
+    @defining(property.asInstanceOf[JsonSchemaNumber]) { num =>
+        @if(num._default != null) { Default: @num._default. }
+        @if(num.minimum != null) { Minimum: @num.minimum. }
+        @if(num.maximum != null) { Maximum: @num.maximum. }
+    }
+}
+@if(property._type == JsonSchemaType.INTEGER) { 
+    @defining(property.asInstanceOf[JsonSchemaInteger]) { num =>
+        @if(num._default != null) { Default: @num._default. }
+        @if(num.minimum != null) { Minimum: @num.minimum. }
+        @if(num.maximum != null) { Maximum: @num.maximum. }
+    }
+}
+@if(property._type == JsonSchemaType.ARRAY) {
+    @defining(property.asInstanceOf[JsonSchemaArray]) { arr =>
+        @if(arr._default != null) {
+            @arr._default
+        }
+        @if(arr.minItems != null) { Min items: @arr.minItems. }
+        @if(arr.maxItems != null) { Max items: @arr.maxItems. }
+    }
+}
+@if(property._type == JsonSchemaType.OBJECT) {
+    @defining(property.asInstanceOf[JsonSchemaObject]) { obj =>
+        @if(obj.minProperties != null) { Min properties: @obj.minProperties. }
+        @if(obj.maxProperties != null) { Max properties: @obj.maxProperties. }
+    }
+}

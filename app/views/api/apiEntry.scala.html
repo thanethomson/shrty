@@ -1,0 +1,126 @@
+@(resource: org.raml.model.Resource)
+@import org.raml.model._
+@if(!resource.getActions.isEmpty) {
+    <div class="panel panel-default">
+        <div class="panel-heading"><code>@resource.getUri</code></div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-12">
+                    @for((actionType,action) <- resource.getActions) {
+                        <div class="row">
+                            <div class="col-md-2">
+                                <span class="label @actionClass(actionType).toString.trim">@actionType</span>
+                            </div>
+                            <div class="col-md-10">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        @action.getDescription
+                                        @if(action.getBody != null) {
+                                            <b>Body schema(s)</b>: @for((mimeType,body) <- action.getBody) {
+                                                <a href="#schemas_@body.getSchema">@body.getSchema</a> (<i>@mimeType</i>);
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                                <div class="row">&nbsp;</div>
+                                @if(action.getBody != null) {
+                                    @for((mimeType,body) <- action.getBody) {
+                                        @if(body.getExample != null) {
+                                            <div class="row"><div class="col-md-12"><b>Body Sample (@mimeType)</b></div></div>
+                                            <div class="row">
+                                                <div class="col-md-11">
+                                                    <pre><code class="json">@Html(body.getExample)</code></pre>
+                                                </div>
+                                            </div>
+                                            <div class="row">&nbsp;</div>
+                                        }
+                                    }
+                                }
+                                
+                                @if(action.getQueryParameters != null && !action.getQueryParameters.isEmpty) {
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <b>Query Parameters</b> <i>(<span class="glyphicon glyphicon-asterisk required"></span> = required)</i>
+                                            
+                                            @for((paramName,param) <- action.getQueryParameters) {
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <span class="glyphicon glyphicon-expand" aria-hidden="true"></span>
+                                                        <i>@paramName</i>
+                                                        @if(param.isRequired) { <span class="glyphicon glyphicon-asterisk required"></span> }
+                                                    </div>
+                                                    <div class="col-md-9">
+                                                        @param.getDescription
+                                                        @if(param.getExample) {
+                                                            Example: <code>@param.getExample</code>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="row">&nbsp;</div>
+                                }
+                                
+                                @if(action.getHeaders != null && !action.getHeaders.isEmpty) {
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <b>Headers</b>
+                                            
+                                            @for((headerName,header) <- action.getHeaders) {
+                                                <div class="row">
+                                                    <div class="col-md-3"><b><code>@headerName</code></b></div>
+                                                    <div class="col-md-9">
+                                                        @header.getDescription
+                                                        @if(header.getExample) {
+                                                            Example: <code>@header.getExample</code>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="row">&nbsp;</div>
+                                }
+                                
+                                @if(action.getResponses != null && action.getResponses.size > 0) {
+                                    <div class="row">
+                                        <div class="col-md-3"><b>Response(s)</b></div>
+                                        <div class="col-md-9"><b>Description/Schema/Example</b></div>
+                                    </div>
+                                    @for((code,response) <- action.getResponses) {
+                                        <div class="row">
+                                            <div class="col-md-3"><span class="label @responseTag(code).toString.trim">@code</span></div>
+                                            <div class="col-md-9">
+                                                @for((mimeType,body) <- response.getBody) {
+                                                    <div class="row">
+                                                        <div class="col-md-12">
+                                                            <a href="#schemas_@body.getSchema">@body.getSchema</a> (<i>@mimeType</i>)
+                                                        </div>
+                                                    </div>
+                                                    @if(body.getExample != null) {
+                                                        <div class="row">
+                                                            <div class="col-md-12">
+                                                                <pre><code class="json">@Html(body.getExample)</code></pre>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">&nbsp;</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}    
+@for((path,subresource) <- resource.getResources) {
+    @apiEntry(subresource)
+}

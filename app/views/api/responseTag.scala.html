@@ -1,0 +1,8 @@
+@(code: String)
+@defining(code.toInt) { codeInt =>
+    @if(codeInt >= 200 && codeInt < 400) {
+        label-success
+    } else {
+        label-danger
+    }
+}
