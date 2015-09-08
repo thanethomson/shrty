@@ -8,14 +8,16 @@ import java.util.Map;
  */
 public class JsonSchemaObject extends JsonSchema {
 
-    public JsonSchemaType type = JsonSchemaType.OBJECT;
-    /** The required properties for this object. */
-    public List<String> required = null;
-    /** Properties for this object. */
-    public Map<String, JsonSchema> properties = null;
-    /** The maximum number of properties permissible for this object. */
-    public Integer maxProperties = null;
-    /** The minimum number of properties permissible for this object. */
-    public Integer minProperties = null;
-    
+  public JsonSchemaType type = JsonSchemaType.OBJECT;
+  /** If this schema object refers to another predefined schema. */
+  public String ref = null;
+  /** The required properties for this object. */
+  public List<String> required = null;
+  /** Properties for this object. */
+  public Map<String, JsonSchema> properties = null;
+  /** The maximum number of properties permissible for this object. */
+  public Integer maxProperties = null;
+  /** The minimum number of properties permissible for this object. */
+  public Integer minProperties = null;
+
 }

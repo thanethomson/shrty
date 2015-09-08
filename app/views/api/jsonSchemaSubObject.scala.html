@@ -12,7 +12,9 @@
     </div>
     @if(prop._type == JsonSchemaType.OBJECT) {
         @defining(prop.asInstanceOf[JsonSchemaObject]) { obj =>
-            @jsonSchemaSubObject(obj.properties, level+1)
+        	@if(obj.properties != null) {
+            	@jsonSchemaSubObject(obj.properties, level+1)
+            }
         }
     }
 }

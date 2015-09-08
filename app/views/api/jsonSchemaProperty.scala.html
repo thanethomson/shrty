@@ -25,6 +25,9 @@
 }
 @if(property._type == JsonSchemaType.ARRAY) {
     @defining(property.asInstanceOf[JsonSchemaArray]) { arr =>
+    	@if(arr.itemSchema) {
+    	  Item schema: <a href="#schemas_@arr.itemSchema">@arr.itemSchema</a>
+    	}
         @if(arr._default != null) {
             @arr._default
         }
@@ -34,7 +37,11 @@
 }
 @if(property._type == JsonSchemaType.OBJECT) {
     @defining(property.asInstanceOf[JsonSchemaObject]) { obj =>
-        @if(obj.minProperties != null) { Min properties: @obj.minProperties. }
-        @if(obj.maxProperties != null) { Max properties: @obj.maxProperties. }
+    	@if(obj.ref != null) {
+    		Schema: <a href="#schemas_@obj.ref">@obj.ref</a>
+    	} else {
+        	@if(obj.minProperties != null) { Min properties: @obj.minProperties. }
+        	@if(obj.maxProperties != null) { Max properties: @obj.maxProperties. }
+        }
     }
 }

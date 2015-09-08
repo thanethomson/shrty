@@ -2,8 +2,468 @@
 title: Shrty API
 version: 0.1
 mediaType: application/json
+schemas:
+  - JsonLogin: >
+      {
+        "id": "JsonLogin",
+        "description": "Message sent from client to log a user in.",
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The e-mail address of the user to be logged in."
+          },
+          "password": {
+            "type": "string",
+            "description": "The password of the user to be logged in."
+          }
+        }
+      }
+  
+  - JsonLoginSuccess: >
+      {
+        "id": "JsonLoginSuccess",
+        "description": "Sent back from the server when a user is successfully logged in.",
+        "type": "object",
+        "required": ["sessionId"],
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "The ID of the newly created session for the user just logged in."
+          }
+        }
+      }
+  
+  - JsonGenericMessage: >
+      {
+        "id": "JsonGenericMessage",
+        "description": "For when the server sends back a generic message where the contents are not important.",
+        "type": "object",
+        "required": ["message"],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "A message string from the server."
+          }
+        }
+      }
+  
+  - JsonSignup: >
+      {
+        "id": "JsonSignup",
+        "description": "Sent by the client to create a new user in the system.",
+        "type": "object",
+        "required": ["email", "firstName", "lastName", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The e-mail address of the user (must be unique in the system)."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "The first name of the user."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "The last name of the user."
+          },
+          "password": {
+            "type": "string",
+            "description": "The plaintext password for the new user."
+          }
+        }
+      }
+  
+  - JsonUser: >
+      {
+        "id": "JsonUser",
+        "description": "A representation of a particular user by the server.",
+        "type": "object",
+        "required": ["id", "email", "firstName", "lastName", "created"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "The database ID of the user."
+          },
+          "email": {
+            "type": "string",
+            "description": "The e-mail address of the user (must be unique in the system)."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "The first name of the user."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "The last name of the user."
+          },
+          "created": {
+            "type": "string",
+            "description": "The date/time at which the user was created in ISO 8601 format, with time zone."
+          }
+        }
+      }
+  
+  - JsonShortUrlPage: >
+      {
+        "id": "JsonShortUrlPage",
+        "description": "A page of short URLs (the result of a query to the server).",
+        "type": "object",
+        "required": ["page", "pageSize", "total", "sortBy", "sortDir", "urls"],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "The page number for the paged response."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "The number of URLs returned per page."
+          },
+          "total": {
+            "type": "integer",
+            "description": "The total number of URLs in the full, un-paged response."
+          },
+          "sortBy": {
+            "type": "string",
+            "description": "The field by which to sort the URLs.",
+            "enum": ["title", "shortCode", "url", "hitCount", "created", "createdBy"]
+          },
+          "sortDir": {
+            "type": "string",
+            "description": "The direction for sorting.",
+            "enum": ["asc", "desc"]
+          },
+          "urls": {
+            "type": "array",
+            "description": "The array of short URLs.",
+            "items": { "$ref": "#JsonShortUrl" }
+          }
+        }
+      }
+  
+  - JsonShortUrl: >
+      {
+        "id": "JsonShortUrl",
+        "description": "A single short URL with all of its properties.",
+        "type": "object",
+        "required": ["id", "title", "shortCode", "url", "hitCount", "created", "createdBy", "primary"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "The database ID of the short URL."
+          },
+          "title": {
+            "type": "string",
+            "description": "A short, descriptive title for the short URL."
+          },
+          "shortCode": {
+            "type": "string",
+            "description": "The short code for the URL."
+          },
+          "url": {
+            "type": "string",
+            "description": "The URL to which the short code resolves."
+          },
+          "hitCount": {
+            "type": "integer",
+            "description": "The number of hits that this short code has received so far."
+          },
+          "created": {
+            "type": "string",
+            "description": "The date/time at which this short URL was created, in ISO 8601 format."
+          },
+          "createdBy": {
+            "type": "object",
+            "$ref": "#JsonUser"
+          },
+          "primary": {
+            "type": "boolean",
+            "description": "Is this short URL the primary one for this particular short code? (for future use)."
+          }
+        }
+      }
 
 documentation:
   - title: Overview
     content: >
-      **Shrty** is an open-source URL shortening service.
+      **Shrty** is an open-source URL shortening service. This page offers you in-depth information
+      regarding the API provided by **Shrty** to manage your short URLs. All data being sent to/from
+      the **Shrty** API must be in JSON format (`application/json`).
+    
+  - title: Authentication
+    content: >
+      **Shrty** requires that one be authenticated to make use of the API. To this end, it provides
+      a login mechanism. The login end-point will return a JSON object containing the session key to
+      be used in interacting with the API. Please note that this session key is unique to a particular
+      user, so each logged-in user will receive their own session key.
+      
+      The session key must appear in the `X-Session-ID` header in every request to the API.
+
+/login:
+  displayName: Session management
+  post:
+    description: Allows a user/system to log in.
+    body:
+      application/json:
+        schema: JsonLogin
+        example: >
+          {
+            "email": "someone@somewhere.com",
+            "password": "mYpAsSw0rD"
+          }
+    
+    responses:
+      200:
+        body:
+          application/json:
+            schema: JsonLoginSuccess
+            example: >
+              {
+                "sessionId": "kahisdmcZ7NQral0hQ73ZpJqJ63wFSB7mgFQ8g5foL8="
+              }
+
+/logout:
+  post:
+    headers:
+      X-Session-ID:
+        description: The session ID.
+        required: true
+        example: kahisdmcZ7NQral0hQ73ZpJqJ63wFSB7mgFQ8g5foL8=
+    description: >
+      Ends the session with the given ID. Future API calls with this session ID will receive
+      a "Forbidden" response.
+    
+    responses:
+      200:
+        body:
+          application/json:
+            schema: JsonGenericMessage
+            example: >
+              {
+                "message": "OK"
+              }
+
+/user:
+  displayName: User management
+  post:
+    description: >
+      Facilitates the creation of a new user in the database. **Note** that e-mail addresses
+      are unique in the system, and so attempts to create a new user with an e-mail address
+      that already exists in the database will fail.
+    body:
+      application/json:
+        schema: JsonSignup
+        example: >
+          {
+            "email": "manderson@gmail.com",
+            "firstName": "Michael",
+            "lastName": "Anderson",
+            "password": "MyPaSsw0Rd"
+          }
+    
+    responses:
+      200:
+        body:
+          application/json:
+            schema: JsonUser
+            example: >
+              {
+                "id": 23,
+                "email": "manderson@gmail.com",
+                "firstName": "Michael",
+                "lastName": "Anderson",
+                "created": "2015-09-03T09:47:19+0200"
+              }
+
+  /{email}:
+    get:
+      headers:
+        X-Session-ID:
+          description: The session ID.
+          required: true
+          example: kahisdmcZ7NQral0hQ73ZpJqJ63wFSB7mgFQ8g5foL8=
+      description: >
+        Allows one to get information on a particular user by way of their e-mail address.
+        *Remember to **escape** e-mail addresses before sending them in URIs*.
+      
+      responses:
+        200:
+          body:
+            application/json:
+              schema: JsonUser
+              example: >
+                {
+                  "id": 23,
+                  "email": "manderson@gmail.com",
+                  "firstName": "Michael",
+                  "lastName": "Anderson",
+                  "created": "2015-09-03T09:47:19+0200"
+                }
+
+/shorturl:
+  displayName: Short URL management
+  get:
+    headers:
+      X-Session-ID:
+        description: The session ID.
+        required: true
+        example: kahisdmcZ7NQral0hQ73ZpJqJ63wFSB7mgFQ8g5foL8=
+    description: >
+      Allows one to retrieve a paged listing of multiple short URLs.
+    queryParameters:
+      query:
+        type: string
+        description: An optional query string by which to filter results.
+        required: false
+        default: ""
+      page:
+        type: integer
+        description: The number of the page of results to retrieve.
+        required: false
+        default: 0
+      pageSize:
+        type: integer
+        description: The number of links per page to retrieve.
+        required: false
+        default: 10
+      sortBy:
+        type: string
+        description: >
+          The field by which to sort the resulting links. Possible options include
+          `title`, `shortCode`, `url`, `hitCount`, `created`, `createdBy`.
+        required: false
+        default: title
+      sortDir:
+        type: string
+        description: The direction in which sorting must take place (asc/desc).
+        required: false
+        default: asc
+    
+    responses:
+      200:
+        body:
+          application/json:
+            schema: JsonShortUrlPage
+            example: >
+              {
+                "page": 0,
+                "pageSize": 10,
+                "total": 12,
+                "sortBy": "title",
+                "sortDir": "asc",
+                "urls": [
+                  {
+                    "id": 12,
+                    "title": "Sample link",
+                    "shortCode": "a5NkL1",
+                    "url": "http://www.google.com",
+                    "hitCount": 25,
+                    "created": "2015-09-03T09:47:19+0200",
+                    "createdBy": {
+                      "id": 23,
+                      "email": "manderson@gmail.com",
+                      "firstName": "Michael",
+                      "lastName": "Anderson"
+                      "created": "2015-09-03T09:47:19+0200"
+                    },
+                    "primary": true
+                  },
+                  ...
+                ]
+              }
+              
+  post:
+    headers:
+      X-Session-ID:
+        description: The session ID.
+        required: true
+        example: kahisdmcZ7NQral0hQ73ZpJqJ63wFSB7mgFQ8g5foL8=
+    description: >
+      Allows one to create a new short URL entry in the database.
+    body:
+      application/json:
+        schema: JsonAddShortUrl
+        example: >
+          {
+            "title": "My new short URL",
+            "url": "http://somewhere.com",
+            /* automatically assigns a new random short code if none is supplied */
+            "shortCode": null
+          }
+          
+    responses:
+      200:
+        body:
+          application/json:
+            schema: JsonShortUrl
+            example: >
+              {
+                "id": 12,
+                "title": "Sample link",
+                "shortCode": "a5NkL1",
+                "url": "http://www.google.com",
+                "hitCount": 0,
+                "created": "2015-09-03T09:47:19+0200",
+                "createdBy": {
+                  "id": 23,
+                  "email": "manderson@gmail.com",
+                  "firstName": "Michael",
+                  "lastName": "Anderson"
+                  "created": "2015-09-03T09:47:19+0200"
+                },
+                "primary": true
+              }
+
+  /{shortCode}:
+    get:
+      headers:
+        X-Session-ID:
+          description: The session ID.
+          required: true
+          example: kahisdmcZ7NQral0hQ73ZpJqJ63wFSB7mgFQ8g5foL8=
+      description: >
+        Retrieves information about a specific short URL. The `{shortCode}` parameter is the
+        short code of the URL whose information should be retrieved.
+      
+      responses:
+        200:
+          body:
+            application/json:
+              schema: JsonShortUrl
+              example: >
+                {
+                  "id": 12,
+                  "title": "Sample link",
+                  "shortCode": "a5NkL1",
+                  "url": "http://www.google.com",
+                  "hitCount": 25,
+                  "created": "2015-09-03T09:47:19+0200",
+                  "createdBy": {
+                    "id": 23,
+                    "email": "manderson@gmail.com",
+                    "firstName": "Michael",
+                    "lastName": "Anderson"
+                    "created": "2015-09-03T09:47:19+0200"
+                  },
+                  "primary": true
+                }
+
+    delete:
+      headers:
+        X-Session-ID:
+          description: The session ID.
+          required: true
+          example: kahisdmcZ7NQral0hQ73ZpJqJ63wFSB7mgFQ8g5foL8=
+      description: >
+        Allows one to delete the short URL with the specified short code (`{shortCode}`).
+      
+      responses:
+        200:
+          body:
+            application/json:
+              schema: JsonGenericMessage
+              example: >
+                {
+                  "message": "OK"
+                }

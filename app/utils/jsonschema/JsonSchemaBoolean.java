@@ -5,7 +5,7 @@ package utils.jsonschema;
  */
 public class JsonSchemaBoolean extends JsonSchema {
 
-    public JsonSchemaType type = JsonSchemaType.BOOLEAN;
-    public Boolean _default = null;
-    
+  public JsonSchemaType type = JsonSchemaType.BOOLEAN;
+  public Boolean _default = null;
+
 }

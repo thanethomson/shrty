@@ -1,5 +1,6 @@
 @(resource: org.raml.model.Resource)
 @import org.raml.model._
+@import com.github.rjeschke.txtmark._
 @if(!resource.getActions.isEmpty) {
     <div class="panel panel-default">
         <div class="panel-heading"><code>@resource.getUri</code></div>
@@ -14,7 +15,7 @@
                             <div class="col-md-10">
                                 <div class="row">
                                     <div class="col-md-12">
-                                        @action.getDescription
+                                        @Html(Processor.process(action.getDescription))
                                         @if(action.getBody != null) {
                                             <b>Body schema(s)</b>: @for((mimeType,body) <- action.getBody) {
                                                 <a href="#schemas_@body.getSchema">@body.getSchema</a> (<i>@mimeType</i>);
@@ -48,9 +49,14 @@
                                                         <span class="glyphicon glyphicon-expand" aria-hidden="true"></span>
                                                         <i>@paramName</i>
                                                         @if(param.isRequired) { <span class="glyphicon glyphicon-asterisk required"></span> }
+                                                        <span class="label label-default">@param.getType().toString()</span>
                                                     </div>
                                                     <div class="col-md-9">
-                                                        @param.getDescription
+                                                    	@if(param.getDefaultValue) {
+                                                    		@Html(Processor.process(param.getDescription + " **Default:** `" + param.getDefaultValue + "`"))
+                                                    	} else {
+                                                    		@Html(Processor.process(param.getDescription))
+                                                    	}
                                                         @if(param.getExample) {
                                                             Example: <code>@param.getExample</code>
                                                         }
@@ -71,7 +77,7 @@
                                                 <div class="row">
                                                     <div class="col-md-3"><b><code>@headerName</code></b></div>
                                                     <div class="col-md-9">
-                                                        @header.getDescription
+                                                        @Html(Processor.process(header.getDescription))
                                                         @if(header.getExample) {
                                                             Example: <code>@header.getExample</code>
                                                         }
