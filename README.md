@@ -1,14 +1,15 @@
 # Shrty
 
 ## Overview
-This is a simple web-based service (with API) that provides URL shortening functionality. Configured properly, it could
-potentially be scaled up to serve large volumes of requests.
+This is a simple web-based service (with API) that provides URL shortening functionality.
+Configured properly, it could potentially be scaled up to serve large volumes of requests.
 
 ## System Requirements
 The following software is required to get an instance of **Shrty** up and running:
 
 * Java >= 8
 * PostgreSQL >= 9.0
+* Redis >= 3 (if you don't want to use EHCache)
 
 ## Quickstart
 To get an instance of **Shrty** up and running on your machine quickly, do the following.
@@ -31,6 +32,21 @@ In an appropriate working directory on your machine, check out the repository.
 
 ```bash
 $ git clone https://github.com/thanethomson/shrty.git
+```
+
+### Set up your cache system config
+At the moment, the application is configured to access a Redis server on your
+`localhost` on port 6379. If you want to rather use Play's built-in EHCache
+caching service, open up your `conf/application_dev.conf` and
+`conf/application_test.conf` files and set the following:
+
+```
+shrty {
+  cache {
+    # change the "redis" value to "ehcache" if you want EHCache
+    system = "ehcache"
+  }
+}
 ```
 
 ### Run the app!
