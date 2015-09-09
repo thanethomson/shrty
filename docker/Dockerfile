@@ -4,7 +4,7 @@ FROM ubuntu:14.04.2
 MAINTAINER Thane Thomson <connect@thanethomson.com>
 
 # Update and upgrade Ubuntu packages
-RUN apt-get update && apt-get -y upgrade
+RUN apt-get update && apt-get -y upgrade && apt-get -y --fix-missing install unzip git
 
 # Set up the JDK
 COPY files/jdk-8u45-linux-x64.tar.gz /tmp/
@@ -16,22 +16,25 @@ ENV JAVA_HOME=/usr/lib/jvm/oraclejdk8
 ENV DERBY_HOME=/usr/lib/jvm/oraclejdk8/db
 ENV PATH=$PATH:/usr/lib/jvm/oraclejdk8/bin:/usr/lib/jvm/oraclejdk8/db/bin:/usr/lib/jvm/oraclejdk8/jre/bin
 
-# Make sure we have git
-RUN apt-get -y install git
+# Install Typesafe Activator
+COPY files/typesafe-activator-1.3.6.zip /opt/
+RUN cd /opt && unzip typesafe-activator-1.3.6.zip -d . && rm typesafe-activator-1.3.6.zip && mv activator-dist-1.3.6 activator && chmod +x ./activator/activator
+ENV PATH=$PATH:/opt/activator
 
 # Get the Shrty repo on the master branch
 RUN cd /opt && git clone https://github.com/thanethomson/shrty.git && mkdir /opt/shrty/logs
 # Copy the application's production config across
 COPY files/application_production.conf /opt/shrty/conf/
 # Build it so it can pull in the dependencies prior to starting the container
-RUN cd /opt/shrty && ./activator compile
+RUN cd /opt/shrty && activator compile
 # By default the application will expose itself on port 9000
 EXPOSE 9000
 # Keep our logs
 VOLUME /opt/shrty/logs
 # Make sure we have the right config file configured for production
-ENV config.resource=application_production.conf
+ENV JAVA_OPTS="$JAVA_OPTS -Dconfig.resource=application_production.conf"
+WORKDIR /opt/shrty
 
 # Our primary command
-CMD ["/opt/shrty/activator", "run"]
+CMD ["activator", "run"]
 
