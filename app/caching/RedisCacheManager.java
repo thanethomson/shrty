@@ -6,7 +6,9 @@ import com.google.inject.Inject;
 import models.Session;
 import models.ShortURL;
 import models.json.JsonSession;
+import play.Configuration;
 import play.Logger;
+import play.Play;
 import play.inject.ApplicationLifecycle;
 import play.libs.F;
 import redis.clients.jedis.Jedis;
@@ -17,8 +19,8 @@ import views.json.JsonShortURL;
 /**
  * A cache system manager built on top of Redis. This uses the plain and simple
  * Jedis API for Redis interaction (i.e. not the clustered version). It also
- * assumes that your Redis instance is running on your localhost on the
- * standard Redis port.
+ * checks the configuration file for the address (host/port) of our Redis
+ * server, and defaults to localhost:6379 if none was configured.
  * 
  * @todo Write a clustered Redis version of this cache manager.
  */
@@ -26,12 +28,31 @@ public class RedisCacheManager implements CacheManager {
   
   private static final Logger.ALogger logger = Logger.of(RedisCacheManager.class);
   private final JedisPool jedisPool;
+  private String redisHost;
+  private Integer redisPort;
 
   @Inject
-  public RedisCacheManager(ApplicationLifecycle lifecycle) {
+  public RedisCacheManager(ApplicationLifecycle lifecycle, Configuration config) {
     logger.debug("Starting up Redis-based cache manager");
+    
+    redisHost = config.getString("shrty.cache.redis.host", null);
+    if (redisHost == null) {
+      logger.debug("No Redis host specified in configuration file, using default host: localhost");
+      redisHost = "localhost";
+    } else {
+      logger.debug(String.format("Using configured Redis host: %s", redisHost));
+    }
+    
+    redisPort = config.getInt("shrty.cache.redis.port", null);
+    if (redisPort == null) {
+      logger.debug("No Redis port specified in configuration file, using default port: 6379");
+      redisPort = 6379;
+    } else {
+      logger.debug(String.format("Using configured Redis port: %d", redisPort));
+    }
+    
     // set up the jedis pool for our multithreaded environment
-    jedisPool = new JedisPool(new JedisPoolConfig(), "localhost", 6379);
+    jedisPool = new JedisPool(new JedisPoolConfig(), redisHost, redisPort);
     
     // we need to destroy our pool when the application stops
     lifecycle.addStopHook(() -> {
