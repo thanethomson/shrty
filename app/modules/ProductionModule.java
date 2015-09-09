@@ -12,23 +12,20 @@ import play.Environment;
 import play.Logger;
 
 /**
- * Sets up dependency injection bindings for local development mode.
+ * Sets up dependency injection bindings for production mode.
  */
-public class DevModule extends AbstractModule {
+public class ProductionModule extends AbstractModule {
 
-  private static final Logger.ALogger logger = Logger.of(DevModule.class);
+  private static final Logger.ALogger logger = Logger.of(ProductionModule.class);
   private final Configuration configuration;
   
-  public DevModule(Environment environment, Configuration configuration) {
+  public ProductionModule(Environment environment, Configuration configuration) {
     this.configuration = configuration;
-    
-    logger.debug(String.format("Database URL: %s", configuration.getString("db.default.url")));
-    logger.debug(String.format("Application secret: %s", configuration.getString("play.crypto.secret")));
   }
 
   @Override
   protected void configure() {
-    logger.debug("Initialising application with DevModule DI");
+    logger.debug("Initialising application with ProductionModule DI");
     // we want the default actor factory, but as an eager singleton - create the necessary actor(s) on startup
     bind(ActorFactory.class).to(DefaultActorFactory.class).asEagerSingleton();
     // set up the caching system

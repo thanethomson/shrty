@@ -26,6 +26,7 @@
   <logger name="actors.DefaultActorFactory" level="DEBUG" />
   <logger name="modules.DevModule" level="DEBUG" />
   <logger name="modules.TestModule" level="DEBUG" />
+  <logger name="modules.ProductionModule" level="DEBUG" />
   <logger name="integration.APITests" level="DEBUG" />
   <logger name="caching.EHCacheManager" level="DEBUG" />
   <logger name="caching.RedisCacheManager" level="DEBUG" />

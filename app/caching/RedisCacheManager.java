@@ -8,7 +8,6 @@ import models.ShortURL;
 import models.json.JsonSession;
 import play.Configuration;
 import play.Logger;
-import play.Play;
 import play.inject.ApplicationLifecycle;
 import play.libs.F;
 import redis.clients.jedis.Jedis;
