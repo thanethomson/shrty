@@ -10,12 +10,14 @@ Configured properly, it could potentially be scaled up to serve large volumes of
 * Cache system integration ([EHCache](http://ehcache.org/) and [Redis](http://redis.io/))
 for high-speed, distributed operation.
 
+
 ## System Requirements
 The following software is required to get an instance of **Shrty** up and running:
 
 * Java >= 8
 * PostgreSQL >= 9.0
 * Redis >= 3 (if you don't want to use EHCache)
+
 
 ## Quickstart
 To get an instance of **Shrty** up and running on your machine quickly, do the following.
@@ -90,12 +92,19 @@ following JSON response:
 
 And you should be able to log in with your submitted e-mail address and password.
 
+### Security
+As you can probably see, the user creation approach outlined here is definitely
+not secure. One of the future improvements planned for the project is a better
+way of signing users up (perhaps Active Directory or OAuth integration).
+
+
 ## API Documentation
 Once your **Shrty** instance is up and running, navigate to `/api` in your web
 browser and you will have access to the latest documentation for the API. This
 documentation is generated from a [RAML](http://raml.org/) source file in
 `conf/api.raml`. Make sure you're logged in though before attempting to access
 this URL.
+
 
 ## License
 The MIT License (MIT)
