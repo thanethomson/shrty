@@ -106,6 +106,11 @@ documentation is generated from a [RAML](http://raml.org/) source file in
 this URL.
 
 
+## Docker Containerisation
+Open up the `docker` folder and see the `README.md` file for more details on
+setting **Shrty** up in a containerised environment.
+
+
 ## License
 The MIT License (MIT)
 
