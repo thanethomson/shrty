@@ -64,11 +64,58 @@ $ ./activator run
 It may take a while to pull in all of the dependencies for the application, but once
 that's done you should have a server up and running (bound to `localhost` port 9000).
 
+### Create your first user
+To be able to log in, and to see the API documentation, you will need to create
+a user for yourself. The quickest way is to use [cURL](http://curl.haxx.se/)
+from your system terminal:
+
+```bash
+$ curl -H "Content-Type: application/json" -X POST -d '{"email": "your.email@address.com",'\
+'"firstName": "Firstname", "lastName": "Surname",'\
+'"password": "YoUr_PaSsw0rd"}' http://localhost:9000/api/user 
+```
+
+If your request was successful, you should receive something resembling the
+following JSON response:
+
+```javascript
+{
+  "id": 3,
+  "firstName": "Firstname",
+  "lastName": "Surname",
+  "email": "your.email@address.com",
+  "created": "2015-09-09T16:27:25+0200"
+}
+```
+
+And you should be able to log in with your submitted e-mail address and password.
+
 ## API Documentation
 Once your **Shrty** instance is up and running, navigate to `/api` in your web
 browser and you will have access to the latest documentation for the API. This
 documentation is generated from a [RAML](http://raml.org/) source file in
-`conf/api.raml`.
+`conf/api.raml`. Make sure you're logged in though before attempting to access
+this URL.
 
 ## License
-This software is licensed under the *MIT License*. See `LICENSE.md` for details.
+The MIT License (MIT)
+
+Copyright (c) 2015 Thane Thomson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
