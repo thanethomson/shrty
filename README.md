@@ -1,5 +1,7 @@
 # Shrty
 
+Version 0.1.0 (See [Semantic Versioning](http://semver.org/))
+
 ## Overview
 This is a simple web-based service (with API) that provides URL shortening functionality.
 Configured properly, it could potentially be scaled up to serve large volumes of requests.
