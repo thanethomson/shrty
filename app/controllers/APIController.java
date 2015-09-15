@@ -1,6 +1,7 @@
 package controllers;
 
 import java.security.NoSuchAlgorithmException;
+import java.util.stream.Collectors;
 
 import com.google.inject.Inject;
 
@@ -9,6 +10,7 @@ import be.objectify.deadbolt.java.actions.SubjectPresent;
 import exceptions.AlreadyExistsException;
 import exceptions.DoesNotExistException;
 import exceptions.InvalidPasswordException;
+import forms.SignupForm;
 import models.ShortURL;
 import models.User;
 import models.json.JsonAddShortUrl;
@@ -16,6 +18,7 @@ import models.json.JsonLogin;
 import models.json.JsonSignup;
 import models.Session;
 import play.Logger;
+import play.data.Form;
 import play.libs.Json;
 import play.mvc.BodyParser;
 import play.mvc.Result;
@@ -46,31 +49,42 @@ public class APIController extends BaseController {
    */
   @BodyParser.Of(BodyParser.Json.class)
   public Result userSignup() {
-    JsonSignup signup = Json.fromJson(request().body().asJson(), JsonSignup.class);
+    Form<SignupForm> signupForm = Form.form(SignupForm.class);
+    SignupForm signup;
     
-    if (signup.firstName == null) {
-      return badRequest(Json.toJson(new JsonError("Missing first name in request")));
-    } else if (signup.lastName == null) {
-      return badRequest(Json.toJson(new JsonError("Missing last name in request")));
-    } else if (signup.email == null) {
-      return badRequest(Json.toJson(new JsonError("Missing e-mail address in request")));
-    } else if (signup.password == null) {
-      return badRequest(Json.toJson(new JsonError("Missing password in request")));
+    // bind the form to the JSON input
+    signupForm = signupForm.bind(request().body().asJson());
+    
+    if (signupForm.hasErrors() || signupForm.hasGlobalErrors()) {
+      // report back on the errors
+      if (signupForm.error("firstName") != null)
+        return badRequest(Json.toJson(new JsonError("Missing first name in request")));
+      if (signupForm.error("lastName") != null)
+        return badRequest(Json.toJson(new JsonError("Missing last name in request")));
+      if (signupForm.error("email") != null)
+        return badRequest(Json.toJson(new JsonError("Missing or invalid email address in request")));
+      if (signupForm.error("password") != null)
+        return badRequest(Json.toJson(new JsonError("Missing password in request")));
+      
+      // generic bad request error
+      return badRequest(Json.toJson(new JsonError("Invalid request")));
     }
     
+    signup = signupForm.get();
     logger.debug(String.format("Received signup request: %s", signup.toString()));
     
     // try to create the user
     User user;
     
     try {
-      user = authRepo.createUser(signup.firstName, signup.lastName, signup.email, signup.password);
+      user = authRepo.createUser(signup.getFirstName(), signup.getLastName(),
+          signup.getEmail(), signup.getPassword());
     } catch (NoSuchAlgorithmException e) {
       logger.error("Unable to create new user", e);
       return internalServerError(Json.toJson(new JsonError("Internal server error")));
     } catch (AlreadyExistsException e) {
       logger.error("Unable to create new user", e);
-      return badRequest(Json.toJson(new JsonError(String.format("User with e-mail address %s already exists in database", signup.email))));
+      return badRequest(Json.toJson(new JsonError(String.format("User with e-mail address %s already exists in database", signup.getEmail()))));
     }
     
     logger.debug(String.format("Successfully created user with ID: %d", user.getId()));
